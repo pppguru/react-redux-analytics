@@ -1,0 +1,148 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+option java_package = "pi.ip.data.unitary.generated";
+option java_multiple_files = true;
+
+import "patent_common.proto";
+import "patent_model.proto";
+
+service PatentNumberService {
+    option deprecated = true;
+
+    // Searches the datastore at unitary-ip-store/PatNum where familyId=family_id
+    // and builds a Set<String> of the "uniPatNum" property
+    rpc GetUniPatNumsByFamilyId (GetUniPatNumsForFamilyRequest) returns (GetUniPatNumsForFamilyResponse) {
+        option deprecated = true;
+    }
+
+    rpc GetEarliestPubDate (GetEarliestPubDateRequest) returns (GetEarliestPubDateResponse) {
+        option deprecated = true;
+    }
+
+    // Searches the datastore at unitary-ip-store/PatNum where uniPat=${uniPatSearchQuery}
+    // return first family id found (will all be the same if multiple results)
+    rpc GetFamilyIdForUniPatNum (GetFamilyIdForUniPatNumRequest) returns (GetFamilyIdForUniPatNumResponse) {
+        option deprecated = true;
+    }
+
+    // Method to convert from appNoEd to uniPatNum.
+    rpc ConvertNumEdToUniPatNum (ConvertNumEdToUniPatNumRequest) returns (ConvertNumEdToUniPatNumResponse) {
+        option deprecated = true;
+    }
+
+    // Method to convert from docDb to uniPatNum.
+    rpc ConvertNumDdToUniPatNum (ConvertNumDdToUniPatNumRequest) returns (ConvertNumDdToUniPatNumResponse) {
+        option deprecated = true;
+    }
+
+    // Method to convert from docDb to uniPatNum.
+    rpc ConvertNumOrigToUniPatNum (ConvertNumOrigToUniPatNumRequest) returns (ConvertNumOrigToUniPatNumResponse) {
+        option deprecated = true;
+    }
+
+    // Method to convert from docId to uniPatNum format.
+    rpc ConvertDocIdToUniPatNum (ConvertDocIdToUniPatNumRequest) returns (ConvertDocIdToUniPatNumResponse) {
+        option deprecated = true;
+    }
+
+    // Given a officeCode + origNumber, this method will attempt to return the application date.
+    rpc RetrieveAppDateBasedOnAppNumOrig (RetrieveAppDateBasedOnAppNumOrigRequest) returns (RetrieveAppDateBasedOnAppNumOrigResponse) {
+        option deprecated = true;
+    }
+
+    // Given a uniPatNum, this method will return all know application and publication numbers
+    rpc GetAllIdentifiersForUniPat (GetAllIdentifiersForUniPatRequest) returns (GetAllIdentifiersForUniPatResponse) {
+        option deprecated = true;
+    }
+
+}
+
+message ConvertNumOrigToUniPatNumRequest {
+    PatNumType pat_num_type = 1;
+    StructuredPatFormat structured_pat = 2;
+}
+
+message ConvertNumOrigToUniPatNumResponse {
+    // empty string used for no result
+    string uni_pat_num = 1;
+}
+
+message ConvertDocIdToUniPatNumRequest {
+    PatNumType pat_num_type = 1;
+    int64 doc_id = 2;
+}
+
+message ConvertDocIdToUniPatNumResponse {
+    // empty string used for no result
+    string uni_pat_num = 1;
+}
+
+message ConvertNumDdToUniPatNumRequest {
+    PatNumType pat_num_type = 1;
+    StructuredPatFormat structured_pat = 2;
+}
+
+message ConvertNumDdToUniPatNumResponse {
+    // empty string used for no result
+    string uni_pat_num = 1;
+}
+
+message ConvertNumEdToUniPatNumRequest {
+    PatNumType pat_num_type = 1;
+    string num_ed = 2;
+}
+
+message ConvertNumEdToUniPatNumResponse {
+    // empty string used for no result
+    string uni_pat_num = 1;
+}
+
+message GetFamilyIdForUniPatNumRequest {
+    string uni_pat_num = 1; // required
+}
+
+message GetFamilyIdForUniPatNumResponse {
+    int64 family_id = 1; // zero if not found (default)
+}
+
+message GetEarliestPubDateRequest {
+    string uni_pat_num = 2;
+}
+
+message GetEarliestPubDateResponse {
+    int32 earliest_pub_date = 1; // yyyyMMdd or zero if not found
+}
+
+message GetUniPatNumsForFamilyRequest {
+    // the family_id to lookup
+    int64 family_id = 1;
+}
+
+message GetUniPatNumsForFamilyResponse {
+    // list will be empty if no results found
+    repeated string uni_pat_nums = 1;
+}
+
+message RetrieveAppDateBasedOnAppNumOrigRequest {
+    string num_orig = 1;
+    string country_code = 2;
+}
+
+message RetrieveAppDateBasedOnAppNumOrigResponse {
+    // Value of 0 indicates date not found
+    int32 date = 1;
+    string uni_pat_num = 2;
+}
+
+message GetAllIdentifiersForUniPatRequest {
+    string uni_pat_num = 1;
+}
+
+message GetAllIdentifiersForUniPatResponse {
+    SaveResult result = 1;
+    PatPackProto application = 2;
+    repeated PatPackProto publications = 3;
+}

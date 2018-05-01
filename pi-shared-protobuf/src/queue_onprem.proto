@@ -1,0 +1,159 @@
+//
+// Copyright (c) 2017 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+option java_package = "pi.ip.generated.queue";
+option java_multiple_files = true;
+
+import "patent_common.proto";
+import "ip-datastore-common.proto";
+import "queue_common.proto";
+
+// -- Simple Queue Service -- //
+
+service KeyQueueOnPrem {
+    // a simple key only queue service - no data storage is provided inside a key message,
+    // and the put will replace any previous row that existed for given KeyQueueName + msg_key_str combo
+
+    // get work units up to specified limit
+    rpc StreamQueueKeys (StreamQueueKeysRequest) returns (stream KeyQueueRow) {
+    }
+
+    // push new item onto queue
+    rpc AddKeyQueueRow (KeyQueueRow) returns (AckResponse) {
+    }
+
+    // delete item from queue
+    rpc DeleteKeyQueueRow (KeyQueueRow) returns (AckResponse) {
+    }
+
+}
+
+message KeyQueueRow {
+    KeyQueueNameOnPrem key_queue_name = 1;
+    string row_key = 2;
+}
+
+enum KeyQueueNameOnPrem {
+    UndefinedQueue = 0;
+
+    InventionTitleSource = 1;
+    CitationSourceSync = 2;
+    PrioritySourceSync = 3;
+    ApplicantSourceSync = 4;
+    RefNumberSourceSync = 5;
+    PrioritySourceFaDb = 6;
+    RefNumberFaDb = 7;
+    PatEventSourceSync = 8;
+    NatJournalSaved = 9;
+    FamilyApplicantSync = 10;
+    DirectCiteSync = 11;
+    FamilyPatEventSync = 12;
+
+    // ephermeral queues (1xx)
+
+    // see jenkins job scheduled-ip-flow-applicant-update
+    ScheduledApplicantCacheUpdate = 100;
+
+    // see jenkins job scheduled-ip-flow-law-firm-cache
+    ScheduledLawFirmCache = 101;
+
+    // see jenkins job scheduled-ip-flow-address-updater
+    ScheduledAddressCache = 102;
+
+    CiteStoreRefreshMembers = 103;
+
+    // retired: 500-501
+
+    // used for re-running a full check against DB
+    RawEntityNormaliseSweep = 502;
+}
+
+message StreamQueueKeysRequest {
+    KeyQueueNameOnPrem key_queue_name = 1;
+    SplitReader split_reader = 2;
+    uint64 result_limit = 3;
+    string start_row_key = 4; // optional
+
+    // usually your regex would start with ^[^#]#  then <<your regex>>
+    // as the row key is always prefixed by the queue name
+    string reg_ex_row_key_filter = 5; // optional
+}
+
+// -- Queue with Delay Pattern -- //
+
+service QueueOnPrem {
+
+    // get work units up to specified limit
+    rpc GetQueueUnitBatch (UnitBatchRequestOnPrem) returns (stream StoredMsgUnit) {
+    }
+
+    // get next queue unit , useful for sort queue item which need human interaction.
+    rpc GetNextQueueUnit (UnitRequestOnPrem) returns (StoredMsgUnit) {
+
+    }
+
+    // push new item onto queue
+    rpc AddUnit (AddUnitRequestOnPrem) returns (AckResponse) {
+    }
+
+    // delete item from queue
+    rpc DeleteQueueUnit (DeleteUnitRequest) returns (AckResponse) {
+    }
+
+    rpc DelayQueueUnit (DelayUnitRequest) returns (AckResponse) {
+    }
+
+}
+
+
+enum QueueNameOnPrem {
+    UndefinedGroup = 0;
+
+    // -- MySQL Trigger Consumers -- //
+    PatFetchIncoming = 38;
+    PatSetApplicant = 39;
+    PatSetApplicantFull = 46;
+    PatSetClassification = 40;
+    AppBasicIdUpdate = 41;
+    LawFirmUpdate = 42;
+    AppBasicJoinUpdate = 43;
+    PatSqlRowCacheUpdate = 44;
+    ServiceAddr_SYNC_SERVADDR = 45;
+
+    // -- Retired 1-45 -- //
+
+    // queue to hold patent discovered by citation process, will sync back to mysql
+    PatentDiscoveredInCitationS3 = 47;
+    // used to update pat+applicant link as much as possible
+    // TODO(Dev) move to jenkins
+    JpaUpdateApplicantFamily = 48;
+}
+
+message UnitBatchRequestOnPrem {
+    QueueNameOnPrem queue_name_on_prem = 1;
+    SplitReader split_reader = 3;
+
+    // duration of time before messages become visible for consumption
+    uint64 lock_time_seconds = 4;
+
+    // use zero for unlimited
+    uint64 result_limit = 5;
+}
+
+message UnitRequestOnPrem {
+    QueueNameOnPrem queue_name_on_prem = 1;
+    // duration of time before messages become visible for consumption
+    uint64 lock_time_seconds = 2;
+}
+
+message AddUnitRequestOnPrem {
+    QueueNameOnPrem queue_name_on_prem = 1;
+
+    // number of seconds before messages are visible for consumption measured as delay from insert time
+    uint64 delay_seconds = 2;
+
+    repeated MsgUnit msg_unit = 3;
+}
+

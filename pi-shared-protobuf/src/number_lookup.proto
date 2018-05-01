@@ -1,0 +1,66 @@
+syntax = "proto3";
+option java_package = "pi.ip.proto.generated";
+option java_multiple_files = false;
+
+import "patent_common.proto";
+import "ip-datastore-common.proto";
+
+// This service is available in SG3 and OnPrem regions
+service NumberLookupService {
+
+    // Get the full suite of information about a given uniPatNum including all publications
+    rpc LookupPatAppIdent (UniMsg) returns (PatIdentResult) {
+    }
+
+    rpc LookupNumRefApp (UniMsg) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefAppByUniPatPrefix (UniMsgPrefix) returns (NumRefResultSingle) {
+        // Similar to LookupNumRefApp, except that we don't need to provide the full uni pat num. The beginning part of a
+        // uni pat is can be provided as long as it is sufficient to uniquely identify a single result.
+        //
+        // E.g. instead of providing the full uni pat JP$12456312$A$20101123, we can provide JP$12456312$A.
+        //
+        // This endpoint will return a Status.INVALID_ARGUMENT error if the UniMsgPrefix matches more than one NumRef
+        // results.
+    }
+
+    rpc LookupNumRefPub (NumDdPubRequest) returns (LookupNumRefPubResponse) {
+    }
+
+    // Note the result received is the list of *APPLICATIONS* in the family
+    rpc LookupAppListByFamId (FamIdRequest) returns (NumRefResultList) {
+    }
+
+    // Note the result received is the list of *PUBLICATIONS* in the family
+    rpc LookupPubListByFamId (FamIdRequest) returns (NumRefResultList) {
+    }
+
+    rpc LookupPubListByUniPat (UniMsg) returns (NumRefResultList) {
+    }
+
+    rpc LookupNumRefAppByNumOrigApp (NumOrigRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefPubByNumOrigPub (NumOrigRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefAppByNumEdApp (NumEdRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefPubByNumEdPub (NumEdRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefAppByDocIdApp (DocIdRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupNumRefPubByDocIdPub (DocIdRequest) returns (NumRefResultSingle) {
+    }
+
+    rpc LookupUniPatLawFirmMappingByFamily (FamIdRequest) returns (UniPatLawFirms) {
+    }
+}
+
+message UniMsgPrefix {
+    string uni_pat_num_prefix = 1;  // E.g. JP$12456312$A
+}

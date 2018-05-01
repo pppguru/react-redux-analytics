@@ -1,0 +1,212 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+import "patent_common.proto";
+import "patent_model.proto";
+
+package pi_unitary_store;
+option java_package = "pi.ip.data.unitary.generated";
+option java_multiple_files = true;
+
+// The UnitaryStoreService service is used to store (and later retrieve) blobs of data associated with a single entity
+// for example, a Patent or an LegalPerson (a `LegalPerson` is any individual or company)
+// in this service the client writes a sequence of messages and sends them to the server, using the provided stream.
+// Once the client has finished writing the messages, it waits for the server to read them and return its response.
+// see info re client "stream" at http://www.grpc.io/docs/guides/concepts.html
+service UnitaryStoreService {
+
+    // persist legal person blob string to storage
+    rpc SaveLegalPersonBlobStr (SaveLegalPersonBlobStrRequest) returns (SaveLegalPersonBlobStrResponse) {
+    }
+
+    // fetch legal person blob string from storage
+    rpc GetLegalPersonBlobStr (GetLegalPersonBlobStrRequest) returns (GetLegalPersonBlobStrResponse) {
+    }
+
+    // DO NOT USE - use SaveUniPatBlobStr if uniPat known, and/or process onprem
+    rpc SavePatBlobStr (SavePatBlobStrRequest) returns (SavePatBlobStrResponse) {
+        option deprecated = true;
+    }
+
+    // The list of blobs returned will skip any blobs where the content of the byte[] is not a String.
+    // At present, this is determined by the compression format.  The only format that can be
+    // transformed from byte[] to String is SNAPPY_COMPRESSED_UTF8.
+    rpc DownloadUniPatBlobStrList (DownloadUnitPatBlobStrListRequest) returns (DownloadUniPatBlobStrListResponse) {
+    }
+
+    // Saves given uni pat blob str (will replace previous blob if it existed).
+    rpc SaveUniPatBlobStr (SaveUniPatBlobStrRequest) returns (SaveUniPatBlobStrResponse) {
+    }
+
+    rpc DeleteUniPatBlobStr (DeleteUniPatBlobStrRequest) returns (DeleteUniPatBlobStrResponse) {
+    }
+
+}
+
+
+enum CacheResult {
+    CACHE_FOUND = 0;
+    CACHE_UNAVAILABLE = 1;
+}
+
+
+message SavePatBlobStrRequest {
+    SavePatBlobRequest save_blob_request = 1;
+    string blob_content_str = 2;
+}
+
+message SavePatBlobRequest {
+    // what is the unique identifier for this blob of information of type pat_blob_type ?
+    // the product owner can answer this business logic question
+    string pat_blob_key = 1;
+
+    repeated PatPackProto pat_packs = 2;
+
+    UnitaryPatPageType pat_page_type = 3;
+
+    // use format yyyyMMdd
+    int32 content_date = 4;
+
+    // user meta data to include with stored meta data
+    repeated HeaderPair content_headers = 5;
+
+    // see http://www.iana.org/assignments/media-types/media-types.xhtml
+    // e.g. text/csv
+    string content_type = 6;
+}
+
+message PatPackWrapper {
+    // PatPackWrapper is used for serialising `repeated PatPackProto` via protobuf.
+    repeated PatPackProto pat_packs = 1;
+}
+
+message HeaderPair {
+    // use prefix 'x-pi-' for header_key name
+    string header_key = 1;
+    string header_value = 2;
+}
+
+message SaveLegalPersonBlobStrRequest {
+    LegalPersonBlob legal_person_blob = 1;
+    string blob_content_str = 2;
+}
+
+message LegalPersonBlob {
+    // what is the unique identifier for this blob of information of type pat_person_type ?
+    // the product owner can answer this business logic question
+    string person_id = 1;
+
+    UnitaryPatLegalPersonType pat_person_type = 2;
+
+    // the string blob to save
+    string str_blob = 3;
+
+    // use format yyyyMMdd - this is the date data was produced as opposed to date it was saved to store
+    int32 content_date = 4;
+}
+
+message SavePatBlobStrResponse {
+    SaveResult result = 1;
+}
+
+message SaveLegalPersonBlobStrResponse {
+    SaveResult result = 1;
+}
+
+message GetLegalPersonBlobStrRequest {
+
+    // what is the unique identifier for this blob of information of type pat_person_type ?
+    // the product owner can answer this business logic question
+    string person_id = 1;
+
+    UnitaryPatLegalPersonType pat_person_type = 2;
+
+}
+
+message GetLegalPersonBlobStrResponse {
+    CacheResult result = 1;
+    LegalPersonBlob legal_person_blob = 2;
+}
+
+
+message DownloadUnitPatBlobStrListRequest {
+    string uni_pat_num = 1;
+}
+
+message DownloadUniPatBlobStrListResponse {
+    repeated UniPatBlobStr blobs = 1;
+}
+
+message UniPatBlobStr {
+    string uni_pat_num = 1;
+    UnitaryPatPageType pat_page_type = 2;
+    string content_blob = 3;
+    string content_key = 4;
+    // use format yyyyMMdd
+    int32 content_date = 5;
+    // user meta data to include with stored meta data
+    repeated HeaderPair content_headers = 6;
+}
+
+message SaveUniPatBlobStrRequest {
+    UniPatBlobStr blob = 1;
+}
+
+message SaveUniPatBlobStrResponse {
+    BlobIdentifier blob_id = 1;
+}
+
+message DeleteUniPatBlobStrRequest {
+    UniPatBlobStr blob = 1;
+}
+
+message DeleteUniPatBlobStrResponse {
+    bool deleted = 1;
+}
+
+message BlobIdentifier {
+    string bucket = 1;
+    string name = 2;
+    int64 generation = 3;
+}
+
+message LocalDate {
+    int32 year = 1;
+    int32 month_of_year = 2;
+    int32 day_of_month = 3;
+}
+
+message UniPatNumber {
+    string country_dd = 1;
+    string kind_dd = 2;
+    string number_dd = 3;
+    LocalDate date = 4;
+}
+
+// These types were previously defined in pi.ip.data.unitary.files.model.UnitaryPatLegalPersonType
+enum UnitaryPatLegalPersonType {
+
+    /**
+     *
+     * CSV line:
+     * application_number,correspondence_name_line_1,correspondence_name_line_2,
+     * correspondence_street_line_1,correspondence_street_line_2,correspondence_city,correspondence_postal_code,
+     * correspondence_region_code,correspondence_region_name,correspondence_country_code,correspondence_country_name,
+     * customer_number
+     */
+    US_ExamResCorres = 0;
+
+    JP_AttorneyCode = 1;
+
+}
+
+enum UnitaryCompressionFormat {
+    RAW_FORMAT = 0;                 // ("raw")
+    SNAPPY_COMPRESSED_BIN = 1;      // ("snappy_bin")
+    SNAPPY_COMPRESSED_UTF8 = 2;     // ("snappy_utf8")
+}
+
+
+

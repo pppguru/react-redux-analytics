@@ -1,0 +1,317 @@
+syntax = "proto3";
+option java_package = "pi.ip.generated.es";
+option java_multiple_files = true;
+//make sure this can be used in grpc gateway
+option go_package = "licensingalert";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "patent_common.proto";
+import "cite_service.proto";
+
+service ESMutationService {
+
+    // Upserts LawFirmRecord document types in Elasticsearch index
+    // Updates relevant PAC law firms in CiteGroupRecord document types in Elasticsearch index
+    rpc UpsertLawFirm (LawFirm) returns (AckResponse) {
+    }
+
+    // Deletes LawFirmRecord document types from Elasticsearch index
+    // Deletes PAC law firm in CiteGroupRecord document types in Elasticsearch index
+    rpc DeleteLawFirm (google.protobuf.Int64Value) returns (AckResponse) {
+    }
+
+    rpc AddPacLawFirmToCiteGroups (AddPacLawFirmToCiteGroupsRequest) returns (AckResponse) {
+    }
+
+    rpc RemovePacLawFirmFromCiteGroups (RemovePacLawFirmFromCiteGroupsRequest) returns (AckResponse) {
+    }
+
+    // called if Applicant new/updated for family grouping
+    // was changed.  The information will only be acted on if family id is being tracked.
+    rpc NotifyApplicantChange (FamilyMsg) returns (AckResponse) {
+    }
+
+    rpc UpdateNcPhase (cite_service.FamilyPhase) returns (AckResponse) {
+    }
+
+    rpc UpdatePacHealth (cite_service.FamilyHealth) returns (AckResponse) {
+    }
+
+    rpc CreateCiteGroupRecord (CiteGroupRecord) returns (AckResponse) {
+    }
+
+    rpc UpdateCiteGroupRecord (CiteGroupRecord) returns (AckResponse) {
+    }
+}
+
+
+service ESReadService {
+    rpc GetCiteGroupRecord (GetCiteGroupRecordRequest) returns (CiteGroupRecord) {
+
+    }
+}
+
+service LawFirmServiceAddressUpdateService {
+    // Upsert into lawfirm_service_address ES index
+    rpc UpsertLawFirmServiceAddressRecord (LawFirmServiceAddressRecord) returns (AckResponse) {
+    }
+
+    // Delete from lawfirm_service_address ES index
+    // Send the service address ID as an int64 value
+    rpc DeleteLawFirmServiceAddressRecord (google.protobuf.Int64Value) returns (AckResponse) {
+    }
+
+    // switch LawFirmServiceAddress `building` alias into production
+    // throws exception if the index does not pass readiness validations
+    rpc DeployLawFirmServiceAddressToProduction (google.protobuf.BoolValue) returns (AckResponse) {
+    }
+}
+
+service LawFirmServiceAddressReadService {
+    rpc SuggestSimilarLawFirmServiceAddressRecord (ServiceAddressRecord) returns (SuggestSimilarLawFirmServiceAddressRecordResponse) {
+    }
+}
+
+message ServiceAddressRecord {
+    int64 id = 1;
+    string name_address = 2;
+    string country = 3;
+    LocationRecord loc = 4;
+}
+
+message LocationRecord {
+    float lat = 1;
+    float lon = 2;
+}
+
+message LawFirmServiceAddressRecord {
+    LawFirm law_firm = 1;
+    ServiceAddressRecord service_address = 2;
+    bool law_firm_flag = 3;
+}
+
+message SuggestSimilarLawFirmServiceAddressRecordResponse {
+    repeated LawFirmServiceAddressRecord suggestions = 1;
+}
+
+message CiteGroupRecord {
+    string id = 1;
+    int64 pac_family_id = 2;
+    int64 nc_family_id = 3;
+    int32 cite_type = 4;
+    int32 creation_date_utc = 5;
+    int32 last_update_date_utc = 6;
+    int32 first_raised_date = 7;
+    bool approximate_cite_date = 8;
+    bool common_applicant = 9;
+    repeated DirectCiteRecord direct_cites = 10;
+    repeated int64 originating_pac_law_firms = 11;
+    repeated int64 all_pac_law_firms = 12;
+    repeated ApplicantRecord pac_applicants = 13;
+    int32 pac_health = 14;
+    string pac_sample_pat_orig = 15;
+    string pac_sample_uni_pat_num = 16;
+    string pac_title = 17;
+    repeated PatentLawFirmRecord pac_patent_law_firm_records = 18;
+    repeated string pac_members = 19;
+    repeated ApplicantRecord nc_applicants = 20;
+    int32 nc_phase = 21;
+    string nc_sample_pat_orig = 22;
+    string nc_sample_uni_pat_num = 23;
+    string nc_title = 24;
+}
+
+message DirectCiteRecord {
+    string pac_uni_pat_num = 1;
+    string pac_pub_dd = 2;
+    string nc_uni_pat_num = 3;
+    string nc_pub_dd = 4;
+    int32 cited_date = 5;
+    int32 cite_type = 6;
+    int32 pac_health = 7;
+    int32 nc_phase = 8;
+}
+
+message ApplicantRecord {
+    string name = 1;
+    string country = 2;
+}
+
+message PatentLawFirmRecord {
+    string uni_pat_num = 1;
+    string orig_num = 2;
+    int64 law_firm_id = 3;
+    string law_firm_name = 4;
+    string law_firm_country = 5;
+    string law_firm_state = 6;
+    string law_firm_website = 7;
+}
+
+message LawFirmRecord {
+    int64 law_firm_id = 1;
+    string law_firm_name = 2;
+    string law_firm_country = 3;
+    string law_firm_state = 4;
+    string law_firm_website = 5;
+}
+
+message ApplicantNameRecord {
+    string normalised = 1;
+    repeated string aliases = 2;
+    string country = 3;
+}
+
+message GetCiteGroupRecordRequest {
+    int64 pac_family_id = 1;
+    int64 nc_family_id = 2;
+}
+
+message AddPacLawFirmToCiteGroupsRequest {
+    string uni_pat_num = 1;
+    string orig_num = 2;
+    int64 pac_family_id = 3;
+    LawFirm law_firm = 4;
+    bool is_originating = 5;
+}
+
+message RemovePacLawFirmFromCiteGroupsRequest {
+    int64 pac_family_id = 1;
+    int64 law_firm_id = 2;
+}
+
+// for updating the applicant search index used in FilingAanalytics product (but not CE)
+service FaAppBasicUpdateService {
+
+    // update FaAppBasicSearch record in `building` (current+1) version of index
+    rpc UpdateApplicantAggregation (FaAppBasicSearchRecord) returns (AckResponse) {
+    }
+
+    // switch ApplicantAggregationIndex `building` alias into production
+    // throws exception if the index does not pass readiness validations
+    rpc DeployAppBasicBuildingToProduction (google.protobuf.BoolValue) returns (AckResponse) {
+    }
+}
+
+service FaAppBasicSearchService {
+    rpc FindAppBasicByName (FindAppBasicByNameRequest) returns (FaAppBasicResultList) {
+        // returns sorted by `scoreScript` - used in applicant name search of fa-client
+    }
+
+    rpc ListTopAppBasicForCountry (ListTopAppBasicForCountryRequest) returns (FaAppBasicResultList) {
+        // returns DESC sorted list by patent-apps-X-years used in browse applicant fa-client if perspective set to matching
+        // country we can't show cross-jurisdictional aspects etc so use main ES index to perform this border-case
+    }
+}
+
+message FindAppBasicByNameRequest {
+    string query = 1;
+    TimePeriod time_period = 2;
+    int32 max_result_size = 3;
+}
+
+message ListTopAppBasicForCountryRequest {
+    string applicant_country = 1;
+    TimePeriod time_period = 2;
+    int32 max_result_size = 3;
+}
+
+message FaAppBasicResultList {
+    repeated FaAppBasicSearchRecord result = 1;
+}
+
+message FaAppBasicSearchRecord {
+    AppBasicProto applicant_basic = 1;
+    repeated string aliases = 2;
+    int64 cross_juris_patent_count_past1 = 3;
+    int64 cross_juris_patent_count_past2 = 4;
+    int64 cross_juris_patent_count_past3 = 5;
+    int64 pending_pct_count = 6;
+}
+
+// for updating the applicant search index used in FilingAanalytics product (but not CE)
+service LawFirmFilingSumUpdateService {
+
+    // update LawFirmFilingSum  record in `building` (current+1) version of index
+    rpc UpdateLawFirmFilingSum (LawFirmFilingSum) returns (AckResponse) {
+    }
+
+    // switch LawFirmFilingSum index `building` alias into production
+    // throws exception if the index does not pass readiness validations
+    rpc DeployLawFirmFilingSumBuildingToProduction (google.protobuf.BoolValue) returns (AckResponse) {
+    }
+}
+
+service LawFirmFilingSumSearchService {
+    rpc FindLawFirmByName (FindLawFirmByNameRequest) returns (LawFirmFilingSumResultList) {
+        // returns sorted by `scoreScript` - used in lawfirm name search of fa-client
+    }
+}
+
+message LawFirmFilingSumResultList {
+    repeated LawFirmFilingSum result = 1;
+}
+
+message FindLawFirmByNameRequest {
+    string query = 1;
+    TimePeriod time_period = 2;
+    int32 max_result_size = 3;
+}
+// Law Firm Search used by CitationEagle
+service LawFirmSearchService {
+    rpc Search (LawFirmSearchRequest) returns (LawFirmSearchResult) {
+        option (google.api.http) = {
+        post: "/la/api/v1/lawfirms/search"
+        body: "*"
+      };
+    }
+
+    rpc FindById (FindLawFirmByIdRequest) returns (LawFirm) {
+        option (google.api.http) = {
+          get: "/la/api/v1/lawfirms/{law_firm_id}"
+        };
+    }
+}
+
+// the naked service is used within the firewall without security checking
+service NakedLawFirmSearchService {
+    rpc Search (LawFirmSearchRequest) returns (LawFirmSearchResult) {
+    }
+
+    rpc FindById (FindLawFirmByIdRequest) returns (LawFirm) {
+    }
+}
+
+// Applicant Search used by CitationEable
+service ApplicantSearchService {
+    rpc Search (ApplicantSearchRequest) returns (ApplicantSearchResult) {
+        option (google.api.http) = {
+          post: "/la/api/v1/applicants/search"
+          body: "*"
+        };
+    }
+}
+// the naked service is used within the firewall without security checking
+service NakedApplicantSearchService {
+    rpc Search (ApplicantSearchRequest) returns (ApplicantSearchResult) {
+    }
+}
+
+message LawFirmSearchRequest {
+    string law_firm_prefix = 1;
+    string country_code = 2; // Optional. Default empty value means get results from all countries.
+}
+message LawFirmSearchResult {
+    repeated LawFirm law_firms = 1;
+}
+
+message FindLawFirmByIdRequest {
+    int64 law_firm_id = 1;
+}
+
+message ApplicantSearchRequest {
+    string applicant_prefix = 1;
+}
+message ApplicantSearchResult {
+    repeated Applicant applicants = 1;
+}

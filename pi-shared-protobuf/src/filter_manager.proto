@@ -1,0 +1,147 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+syntax = "proto3";
+option java_package = "io.practiceinsight.licensingalert.filtermanager.generated";
+option java_multiple_files = true;
+import "google/api/annotations.proto";
+import "citation_search.proto";
+
+package licensingalert;
+
+service FilterManagerService {
+    rpc Create (CreateFilterRequest) returns (FilterCreated) {
+        option (google.api.http) = {
+          post: "/la/api/v1/filters"
+          body: "*"
+        };
+    }
+
+    rpc FindForUser (FindFiltersForUserRequest) returns (FindFiltersResult) {
+        option (google.api.http) = {
+          post: "/la/api/v1/filters/for_user"
+          body: "*"
+        };
+    }
+
+    rpc Delete (DeleteFilterRequest) returns (FilterDeleted) {
+        option (google.api.http) = {
+          post: "/la/api/v1/filters/delete"
+          body: "*"
+        };
+    }
+}
+
+service NakedFilterManagerService {
+    rpc Create (CreateFilterRequest) returns (FilterCreated) {
+    }
+
+    rpc FindForUser (FindFiltersForUserRequest) returns (FindFiltersResult) {
+    }
+
+    rpc Delete (DeleteFilterRequest) returns (FilterDeleted) {
+    }
+
+    rpc FindAllUsers (FindAllUsersRequest) returns (AllUsersResponse) {
+    }
+
+    rpc UpdateFilterLastFetchedDateToNow (UpdateFilterLastFetchDateRequest) returns (UpdateFilterLastFetchDateResponse) {
+    }
+}
+
+service PacApplicantExclusionManagerService {
+    rpc Create (CreatePacApplicantExclusionRequest) returns (PacApplicantExclusionCreated) {
+        option (google.api.http) = {
+          post: "/la/api/v1/citation_cite_to_applicant_exclusions"
+          body: "*"
+        };
+    }
+
+    rpc Delete (DeletePacApplicantExclusionRequest) returns (PacApplicantExclusionDeleted) {
+        option (google.api.http) = {
+          post: "/la/api/v1/citation_cite_to_applicant_exclusions/delete"
+          body: "*"
+        };
+    }
+}
+
+service NakedPacApplicantExclusionManagerService {
+    rpc Create (CreatePacApplicantExclusionRequest) returns (PacApplicantExclusionCreated) {
+    }
+
+    rpc Delete (DeletePacApplicantExclusionRequest) returns (PacApplicantExclusionDeleted) {
+    }
+}
+
+message CreateFilterRequest {
+    string user_id = 1;
+    string filter_name = 2;
+    repeated FilterRule filter_rules = 3;
+}
+
+message FilterCreated {
+    string filter_id = 1;
+}
+
+message FindAllFiltersRequest {
+    int32 fetch_offset = 3;
+    int32 fetch_limit = 4;
+}
+
+message FindFiltersForUserRequest {
+    string user_id = 1;
+    int32 fetch_offset = 2;
+    int32 fetch_limit = 3;
+}
+
+message FindFiltersResult {
+    repeated Filter filters = 1;
+    repeated string pac_applicants_to_exclude = 2;
+    int64 total_count = 3;
+}
+
+message Filter {
+    string filter_id = 1;
+    string user_id = 2;
+    string filter_name = 3;
+    repeated FilterRule rules = 4;
+    int64 last_fetched_date_utc = 5;
+}
+
+message DeleteFilterRequest {
+    string filter_id = 1;
+}
+
+message FilterDeleted {
+}
+
+message UpdateFilterLastFetchDateRequest {
+    string filter_id = 1;
+}
+
+message UpdateFilterLastFetchDateResponse {
+
+}
+
+message FindAllUsersRequest {
+}
+
+message AllUsersResponse {
+    repeated string user_ids = 1;
+}
+
+message CreatePacApplicantExclusionRequest {
+    string user_id = 1;
+    string applicant = 2;
+}
+
+message PacApplicantExclusionCreated {
+}
+
+message DeletePacApplicantExclusionRequest {
+    string user_id = 1;
+    string applicant = 2;
+}
+
+message PacApplicantExclusionDeleted {
+}
+

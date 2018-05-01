@@ -1,0 +1,75 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package cluster_cache;
+option java_package = "pi.framework.cache.generated";
+option java_multiple_files = true;
+
+// Redis-backed distributed cache for apps and services
+service ClusterCacheService {
+    rpc FetchCacheItem (FetchCacheItemRequest) returns (FetchCacheItemResponse) {
+    }
+
+    rpc StoreCacheItem (StoreCacheItemRequest) returns (StoreCacheItemResponse) {
+    }
+
+    rpc StoreIfHigher (StoreIfHigherRequest) returns (StoreIfHigherResponse) {
+    }
+
+    rpc DeleteCacheItem (DeleteCacheItemRequest) returns (DeleteCacheItemResponse) {
+    }
+}
+
+message CacheKey {
+    // must be non-empty strimg
+    string key_prefix = 1;
+
+    // must be non-empty strimg
+    string key_suffix = 2;
+}
+
+message FetchCacheItemRequest {
+    // mandatory field
+    CacheKey key = 1;
+}
+
+message FetchCacheItemResponse {
+    // empty string indicates no value in cache
+    string value = 1;
+}
+
+message StoreCacheItemRequest {
+    CacheKey key = 1;
+    // must be non-empty strimg
+    string value = 2;
+
+    // zero value indicates never expire - not recommended
+    int64 seconds_to_expire = 3;
+}
+
+message StoreCacheItemResponse {
+    // exception on failure
+}
+
+message DeleteCacheItemRequest {
+    // mandatory field
+    CacheKey key = 1;
+}
+
+message DeleteCacheItemResponse {
+    // exception on failure
+}
+
+message StoreIfHigherRequest {
+    CacheKey key = 1;
+
+    // must be non-empty strimg
+    int64 value = 2;
+}
+
+message StoreIfHigherResponse {
+    // returns whether value was higher than previous (or if first time stored)
+    bool value_was_saved = 1;
+}

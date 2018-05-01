@@ -1,0 +1,718 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package pi_relational_db;
+option java_package = "pi.ip.data.relational.generated";
+option java_multiple_files = true;
+
+// This package is available via service definition PiKubeServiceImpl#IP_DATA_RELATIONAL_SERVICE_HOST
+// If running outside of cluster but need production services, e.g. google dataflow, be sure to set
+// CONF_PI_PROJECT_ID to the project id that is running the dataflow
+
+// NB: Any immutable methods should be added to services that only supply immutable (read) rpc methods
+
+import "patent_common.proto";
+import "google/protobuf/wrappers.proto";
+
+service PatUpdateService {
+
+    rpc PersistNewPublication (CoreBiblio) returns (AckResponse) {
+        // if filing date older than 7 years skipped
+        // only where first publication date is within 2 years are records saved by this method
+        // if new record saved, it fetches the applicant information and saves at time of creation
+    }
+
+    rpc PersistCiteMember (CoreBiblio) returns (AckResponse) {
+        // if exists in PatentApp, no action needed
+        // if older than 20 years, no action needed
+        // no applicants required if persisted to archive
+        // for pac citation references, request archive store/fetch to determine law firm
+        // a record is created in PatentArchive if not existing previously
+    }
+
+    rpc PersistPriorityPublication (PersistPriorityRequest) returns (AckResponse) {
+        // inserts into PctApp / RegApp table as required
+        // if new record saved, it fetches the applicant information and saves at time of creation
+    }
+
+    // requests relational db service to set the classification info for use in FA service
+    rpc SetMissingClassifications (UniFamilyMsg) returns (AckResponse) {
+        option deprecated = true; // DEPRECATED we should push data to MySQL but not ask it to gather it
+
+        // 1. check if classification info is already set in DB for uniPatNum in 3 tables, and if yes, return
+
+        // next step:
+        // 2. IF another family member in PatentApp has classification set, use that info and jump to step (4)
+
+        // 3. Get list of family members from patent_number service, and iterate over ipcr of each until
+        // a valid/known classification is found
+
+        // NB: No need to store to join table re ipcr - just interested in the high level classifications
+
+        // 4. if/when valid/known classification found, find all in 3 tables (PatentApp/RegApp/PctApp) WHERE no
+        // classification info is recorded for given familyId, then set for all those records and return
+
+        // 5. if classification cannot be determined or any exception, throw it back to the caller
+    }
+
+    // requests relational db service to updated applicants to `latest` for given uniPatNum
+    rpc UpdateApplicantFamily (UpdateApplicantFamilyRequest) returns (AckResponse) {
+        // 1. Search for apps in 3 tables (skip PatentArchive) with
+        //     -- given familyId
+        //     -- AND where (applicant_updated=0 or < `applicant_updated`)  [update_date may be zero, which is OK]
+        // 2. If no uniPatNum found meeting criteria, return
+        // 3. Get applicants based on familyId from names service and prepare `applicantBasicIdSet`
+        // 4. If applicantBasicIdSet is not empty (forach app identified from the 3 tables):
+        // 5. Set applicant join table and any applicant (first in set)`displayApplicant` (deprecated)
+        // 6. Set applicant_updated to todayUtc (yyyyMMdd)
+    }
+
+    rpc UpdateApplicantUniPat (UniMsg) returns (AckResponse) {
+        // get family by uni_pat
+        // get applicant by family
+        // update applicate by given uni_pat
+    }
+
+    // Get the id for a name + country pair.  If the name + country pair do not exist, persist it to DB and return id.
+    rpc UpsertApplicantBasic (UpsertApplicantBasicRequest) returns (UpsertApplicantBasicResponse) {
+        option deprecated = true; // DEPRECATED not using id
+    }
+
+    // IPFLOW-51 remove this method after IPFLOW-51 resolved
+    rpc SetIpCClassificationDdXml (SetMetaDdXmlRequest) returns (SetMetaDdXmlResponse) {
+        option deprecated = true; // DEPRECATED in favour of PersistPubUpdateXml
+    }
+}
+
+// in the usual case, NormalisedServiceEntity#normalised_service_id will be empty when making request
+message NormalisedServicePackage {
+    NormalisedServiceEntity normalised_service_entity = 1;
+    repeated RawAddrEntity raw_service_entity = 2;
+}
+
+service LawFirmDbService {
+    // get information about a law firm by id;
+    // the service returns the information stored in the law_firm SQL table
+    rpc GetLawFirmById (GetLawFirmByIdRequest) returns (GetLawFirmByIdResponse) {
+    }
+
+    rpc GetLawFirmsByIds (GetLawFirmsByIdsRequest) returns (GetLawFirmsByIdsResponse) {
+    }
+
+    rpc CreateLawFirm (CreateLawFirmRequest) returns (CreateLawFirmResponse) {
+    }
+
+    // provide batches of sync records to be consumed by flow
+    rpc GetSyncUniPatLawFirm (GetSyncUniPatLawFirmRequest) returns (GetSyncUniPatLawFirmResponse) {
+        // deprecated - add the sync_law_firm logic into SyncService
+    }
+
+    // remove successfully synced records
+    rpc DeleteSyncUniPatLawFirm (DeleteSyncUniPatLawFirmRequest) returns (AckResponse) {
+        // deprecated - add the sync_law_firm logic into SyncService
+    }
+
+    //search given uniPat number against patent_app and patent_archive
+    //find the first lawFirm and return
+    rpc GetLawFirmByUniPat (UniMsg) returns (LawFirm) {
+    }
+
+    //search given uniPat number against patent_app and patent_archive
+    //find the first lawFirm and return
+    rpc GetLawFirmsByUniPats (LawFirmsByUniPatsRequest) returns (LawFirmsByUniPatsResponse) {
+    }
+}
+
+service ServiceAddressService {
+    // Data stored in the service_address MySQL table
+
+    rpc GetServiceAddressById (GetServiceAddressByIdRequest) returns (ServiceAddress) {
+        // Returns Status.NOT_FOUND error code if the service address can't be found
+    }
+
+    rpc GetNextServiceAddressForSorting (GetNextServiceAddressForSortingRequest) returns (ServiceAddress) {
+        // Get service addresses matching the request, order by high value records first
+        // and return the top record
+    }
+
+    rpc GetNextServiceAddressFromPlaylist (GetNextServiceAddressFromPlaylistRequest) returns (ServiceAddress) {
+        // Get service address from a pre-defined playlist. Used to test service address
+        // sorting candidates and for training.
+    }
+
+    rpc GetServiceAddressesForLawFirm (GetServiceAddressesForLawFirmRequest) returns (GetServiceAddressesForLawFirmResponse) {
+    }
+
+    rpc AssignServiceAddressToLawFirm (AssignServiceAddressToLawFirmRequest) returns (AckResponse) {
+    }
+
+    rpc UnassignServiceAddressFromLawFirm (UnassignServiceAddressFromLawFirmRequest) returns (AckResponse) {
+    }
+
+    rpc SetServiceAddressAsNonLawFirm (SetServiceAddressAsNonLawFirmRequest) returns (AckResponse) {
+    }
+
+    rpc InsufficientInfoToSort (InsufficientInfoToSortRequest) returns (AckResponse) {
+        //sets service address to INSUFFICIENT_INFO state that means service address can't be sorted.
+    }
+
+    rpc GetSamplePatentAppsForServiceAddress (GetSamplePatentAppsForServiceAddressRequest) returns (GetSamplePatentAppsForServiceAddressResponse) {
+    }
+
+    rpc IncrementSortScore (IncrementSortScoreRequest) returns (AckResponse) {
+    }
+
+    rpc DecrementSortScore (DecrementSortScoreRequest) returns (AckResponse) {
+    }
+
+    rpc LogSortDecision (LogSortDecisionRequest) returns (AckResponse) {
+    }
+}
+
+service ConfigurationService {
+
+    // Fetch config value for a given key
+    rpc GetConfigValue (GetConfigValueRequest) returns (GetConfigValueResponse) {
+    }
+
+    // Set config value for a given key
+    rpc SetConfigValue (SetConfigValueRequest) returns (SetConfigValueResponse) {
+    }
+}
+
+service SyncService {
+
+    // Stream sync records to be consumed by flow
+    rpc GetSyncLawFirms (SyncRequest) returns (stream SyncLawFirm) {
+        // If SyncRequest.limit_result_count is 0, streams all the SyncLawFirm records out
+    }
+
+    rpc GetSyncPatApps (SyncRequest) returns (stream SyncApp) {
+    }
+
+    rpc GetSyncPatArchives (SyncRequest) returns (stream SyncApp) {
+    }
+
+    // Provide batches of sync records to be consumed by flow
+    rpc GetSyncLawFirmBatch (SyncRequest) returns (GetSyncLawFirmResponse) {
+        // Deprecated
+    }
+
+    // Remove successfully synced records
+    rpc DeleteSyncLawFirm (DeleteSyncLawFirmRequest) returns (AckResponse) {
+    }
+
+    rpc DeleteSyncPatApp (DeleteSyncAppRequest) returns (AckResponse) {
+    }
+
+    rpc DeleteSyncPatArchive (DeleteSyncAppRequest) returns (AckResponse) {
+    }
+
+    rpc GetPendingSync (PendingSyncRequest) returns (stream SqlSyncRow) {
+    }
+
+    // when deleting pending sync, only sync_id is mandatory
+    rpc DeletePendingSync (SqlSyncRow) returns (AckResponse) {
+    }
+
+    rpc SetGeoForServiceAddr (stream GeoForServiceAddrRequest) returns (AckResponse) {
+    }
+}
+
+service LiveBiblioQueueService {
+
+    // get the agent fetch status for a uni pat
+    // returns status NOT_FOUND error if the item doesn't exist
+    rpc GetAgentFetchStatus (GetAgentFetchStatusRequest) returns (GetAgentFetchStatusResponse) {
+    }
+
+
+    // Returns dump of all sort requests that are pending (IPFLOW-1179)
+    rpc DumpPendingLiveAgentTable (DumpPendingLiveAgentRequest) returns (stream PendingLiveAgentRequest) {
+
+    }
+
+    // get batch of pat fetch items up to the specified limit
+    rpc GetPendingAgentBatch (GetPendingAgentRequest) returns (PendingAgentResult) {
+    }
+
+    // informs DB that UniPatNum is applicant filed by updating the 4 pat tables
+    // see IPFLOW-700
+    rpc SetApplicantFiledStatus (UniMsg) returns (AckResponse) {
+    }
+
+    // defer item from live biblio queue
+    rpc DeferPendingAgent (DeferPendingAgentRequest) returns (AckResponse) {
+    }
+
+    rpc UpdatePendingAgentRawKey (UpdatePendingAgentRawKeyRequest) returns (AckResponse) {
+        option deprecated = true; // use UpdatePendingAgentRow
+    }
+
+    rpc UpdatePendingAgentRow (UpdatePendingAgentRowRequest) returns (AckResponse) {
+    }
+}
+
+service ApplicantUpdateService {
+
+    // Remove applicant that is not joined to any records (returns true always) or throws exception if in use
+    rpc RemoveRedundantApplicant (google.protobuf.Int64Value) returns (google.protobuf.BoolValue) {
+        // steps of method - any db logic should be in relational-db-mutable or 'above' (i.e. service module):
+        //   i.   remove ApplicantBasic matching id of record passed as the param
+        //   ii.  if foreign key constraints fail, log details of id etc at level error, and throw exception to caller
+    }
+}
+
+message DumpPendingLiveAgentRequest {
+    uint32 max_results = 1;
+    uint64 max_id = 2;
+    // used for debugging, leave empty for all office codes
+    string limit_to_office_code = 3;
+}
+
+message PendingAgentResult {
+    repeated PendingAgent pending_agent = 1;
+}
+
+message PendingLiveAgentRequest {
+    string uni_pat = 1;
+    uint64 live_agent_request_id = 2;
+    uint64 pat_arch_id = 3;
+    uint64 reg_id = 4;
+    uint64 pct_id = 5;
+    uint64 pat_app_id = 6;
+}
+
+message PendingAgent {
+    string uni_pat = 1;
+    uint64 live_agent_request_id = 2;
+}
+
+message UpdatePendingAgentRowRequest {
+    string uni_pat = 1;
+    string raw_key = 2;
+    string normalized_key = 3;
+}
+
+message UpdatePendingAgentRawKeyRequest {
+    string uni_pat = 1;
+    string raw_key = 2;
+    string normalized_key = 3;
+}
+
+enum PendingAgentStatus {
+    FETCH_PENDING = 0;
+    NORMALISATION_PENDING = 1;
+    NORMALISATION_COMPLETE = 2;
+    APP_SELF_FILED = 3;
+}
+
+
+message DeferPendingAgentRequest {
+    string uni_pat = 1;
+    string defer_reason = 2;
+    uint32 defer_by_days_from_now = 3;
+}
+
+message GetAgentFetchStatusRequest {
+    string uni_pat = 1;
+}
+
+enum DeferReason {
+    NOT_FOUND_EXCEPTION = 0;
+    UFE_EXCEPTION = 1;
+    NO_CACHE_EXCEPTION = 2;
+    TRANSIENT_ERROR = 3;
+    LOCAL_EXCEPTION = 4;
+}
+
+message GetAgentFetchStatusResponse {
+    PendingAgentStatus fetch_status = 1;
+}
+
+message GetPendingAgentRequest {
+    string office_code = 1;
+    uint32 reader_number = 2;
+    uint32 num_of_readers = 3;
+    // use zero for unlimited
+    uint32 result_limit = 4;
+}
+
+
+message GeoForServiceAddrRequest {
+    enum GeoResultType {
+        GeoAPIRefusesInput = 0;
+        ValidGeoResult = 1;
+    }
+
+    uint64 id = 1;
+    GeoResultType geo_result_type = 2;
+    double lat = 3;
+    double long = 4;
+}
+
+message PendingSyncRequest {
+    int32 limit = 1;
+}
+
+message SqlSyncRow {
+    string sync_id = 1;
+    SqlSyncTable sync_table = 2;
+    string data_blob = 3;
+}
+
+enum SqlSyncTable {
+    INVALID = 0;
+    SYNC_APPB = 1;
+    SYNC_APPB_APP = 2;
+    SYNC_APPB_PCT = 3;
+    SYNC_APPB_REG = 4;
+    SYNC_LAWF = 5;
+    SYNC_PAT_ACH = 6;
+    SYNC_PAT_APP = 7;
+    SYNC_PCT_APP = 8;
+    SYNC_REG_APP = 9;
+    SYNC_SERVADDR = 10;
+    SYNC_PAT_NEW_ALL = 11;
+    SYNC_PAT_NEW_FA = 12;
+}
+
+message LawFirmsByUniPatsRequest {
+    repeated string uni_pat_nums = 1;
+}
+
+message LawFirmsByUniPatsResponse {
+    repeated UniPatLawFirm uni_pat_law_firms = 1;
+}
+
+message GetServiceAddressByIdRequest {
+    int64 service_address_id = 1;
+}
+
+message GetServiceAddressesForLawFirmRequest {
+    int64 law_firm_id = 1;
+}
+
+message GetServiceAddressesForLawFirmResponse {
+    repeated ServiceAddress service_addresses = 1;
+}
+
+message AssignServiceAddressToLawFirmRequest {
+    int64 service_address_id = 1;
+    int64 law_firm_id = 2;
+}
+
+message UnassignServiceAddressFromLawFirmRequest {
+    int64 service_address_id = 1;
+    int64 law_firm_id = 2;
+}
+
+message SetServiceAddressAsNonLawFirmRequest {
+    int64 service_address_id = 1;
+}
+
+message InsufficientInfoToSortRequest {
+    int64 service_address_id = 1;
+}
+
+message GetSamplePatentAppsForServiceAddressRequest {
+    int64 service_address_id = 1;
+    int32 limit = 2; // Maximum number of results returned
+}
+
+message GetSamplePatentAppsForServiceAddressResponse {
+    repeated SamplePatentApp sample_patent_apps = 1;
+}
+
+message IncrementSortScoreRequest {
+    int64 service_address_id = 1;
+}
+
+message DecrementSortScoreRequest {
+    int64 service_address_id = 1;
+}
+
+message LogSortDecisionRequest {
+    string username = 1;
+    ServiceAddress service_address = 2;
+
+    oneof sort_action {
+        LawFirm assign_to_law_firm = 3;
+        LawFirm create_law_firm = 4;
+        bool non_law_firm = 5;
+        bool insufficient_info_to_sort = 6;
+    }
+
+    SortEffect sort_effect = 7;
+    SortResult sort_result = 8;
+}
+
+message SamplePatentApp {
+    string uni_pat_num = 1;
+    string app_num = 2;
+    repeated string applicants = 3;
+}
+
+message SyncRequest {
+    // Positive integer specifying the maximum number of results to return (sql LIMIT `limit_result_count`)
+    int32 limit_result_count = 1;
+}
+
+message GetSyncLawFirmResponse {
+    // Empty list indicates that no results are available
+    repeated SyncLawFirm result_list = 1;
+}
+
+message GetSyncAppResponse {
+    // Empty list indicates that no results are available
+    repeated SyncApp result_list = 1;
+}
+
+message DeleteSyncLawFirmRequest {
+    // SYNC_LAWF.id
+    int64 sync_id = 1;
+}
+
+message DeleteSyncAppRequest {
+    // zsync_hb_uni_pat_lf.id
+    int64 sync_id = 1;
+}
+
+message DeleteSyncUniPatLawFirmRequest {
+    // zsync_hb_uni_pat_lf.id
+    int64 sync_id = 1;
+}
+
+message SyncUniPatLawFirm {
+    // zsync_hb_uni_pat_lf.id
+    int64 sync_id = 1;
+
+    // zsync_hb_uni_pat_lf.uni_pat
+    string uni_pat = 2;
+
+    // zero represents null
+    int64 law_firm_id_old = 3;
+
+    // zero represents null
+    int64 law_firm_id_new = 4;
+
+    // zero represents null
+    int64 family_id = 5;
+
+    // timsetamp converted to epoch long
+    int64 event_ts = 6;
+}
+
+message GetSyncUniPatLawFirmRequest {
+    // positive integer specifying the maximum number of results to return (sql LIMIT `limit_result_count`)
+    int32 limit_result_count = 1;
+}
+
+message GetSyncUniPatLawFirmResponse {
+    // empty list indicates that no results are available
+    repeated SyncUniPatLawFirm sync_uni_pat_law_firm = 1;
+}
+
+message CoreBiblio {
+    string uni_pat_num = 1;
+    string app_no_ed = 2;
+    int64 fam_id = 3;
+    int32 earliest_pub_date = 4;
+}
+
+message PersistPriorityRequest {
+    string uni_pat_num = 1;
+    repeated string priority_xml = 2;
+    int64 fam_id = 3;
+}
+
+message PersistPatentBaseRequest {
+    string uni_pat_num = 1;
+    string priority_xml = 2;
+    int64 fam_id = 3;
+    // earliest known pub date
+    int32 pub_date = 4;
+    string app_no_ed = 5;
+}
+
+message PersistPatentPubOnlyRequest {
+    string uni_pat_num = 1;
+    int64 fam_id = 2;
+    // earliest known pub date
+    int32 pub_date = 3;
+    string app_no_ed = 4;
+}
+
+message SetClassificationMsg {
+    UniFamilyMsg uni_family_msg = 1;
+    string exch_doc_xml_wrapper = 2;
+    string ipcr_xml = 3;
+}
+
+message UpdateApplicantFamilyRequest {
+    int64 family_id = 1;
+    int32 update_date_utc = 2; // yyyyMMdd
+}
+
+message PersistPatentRequest {
+    string uni_pat_num = 1;
+    string exch_doc_xml_wrapper = 2;
+    string priority_xml = 3;
+    string ipcr_xml = 4;
+}
+
+message GetLawFirmsByIdsRequest {
+    repeated int64 law_firm_ids = 1;
+}
+
+message GetLawFirmsByIdsResponse {
+    repeated LawFirm law_firms = 1;
+}
+
+message GetLawFirmByIdRequest {
+    int64 law_firm_id = 1; // required
+}
+
+message GetLawFirmByIdResponse {
+    enum GetLawFirmByIdResult {
+        LAW_FIRM_LOOKUP_OK = 0;
+        LAW_FIRM_NOT_FOUND = 1;
+    }
+
+    GetLawFirmByIdResult result = 1;
+    LawFirm law_firm = 2; // Will not be set in case of LAW_FIRM_NOT_FOUND
+}
+
+message CreateLawFirmRequest {
+    LawFirm law_firm = 1;
+    string created_by = 2; // Sets last_user_edit to the staff member who created this record
+}
+
+message CreateLawFirmResponse {
+    int64 law_firm_id = 1;
+}
+
+
+message GetConfigValueRequest {
+    string config_key = 1;
+}
+
+message GetConfigValueResponse {
+    string config_key = 1;
+    // returns empty string if config key not found
+    string config_value = 2;
+}
+
+message SetConfigValueRequest {
+    string config_key = 1;
+    string config_value = 2;
+}
+
+message SetConfigValueResponse {
+}
+
+message DocDbXml {
+    // snappy compressed binary of docdb xml string
+    bytes doc_db_xml_snappy = 1;
+}
+
+message SetMetaDdXmlRequest {
+    string doc_db_xml = 1;
+}
+
+message SetMetaDdXmlResponse {
+    // no response fields, throws exception via onError or otherwise completed
+}
+
+
+message PersistDdXmlRequest {
+    enum JpaPersistType {
+        ANALYTICS = 0;
+    }
+    JpaPersistType jpa_persist_type = 1 [deprecated = true];
+    string doc_db_xml = 2;
+}
+
+message PersistDdXmlResponse {
+    enum PersistDdXmlResult {
+        OK = 0;
+    }
+    PersistDdXmlResult persist_result = 1;
+}
+
+message UpsertApplicantBasicRequest {
+    string name_dd = 1; // required name in DOCDB format
+    string country = 2; // required
+}
+
+message UpsertApplicantBasicResponse {
+    // name and country in return response will match request.  The id will be added in response.
+    AppBasicMsg app_basic = 1;
+}
+
+message AppBasicMsg {
+    int64 id = 1;
+    string name = 2;
+    string country = 3;
+}
+
+message PatentPub {
+    // PatentApp#appNumber or PatentArchive#appNumber
+    string app_no_ed = 1;
+    // PatentApp#lawFirmDetermined or PatentArchive#lawFirmDetermined
+    bool law_firm_determined = 2;
+
+    // For the optional items below:
+    // PatentApp#serviceAddress#lawFirmEntity or PatentApp#serviceAddress#lawFirmEntity
+    int64 law_firm_id = 3;
+    string law_firm_name = 4;
+    string law_firm_state = 5;
+    string law_firm_country = 6;
+
+    repeated AppBasicMsg app_basic_list = 7;
+}
+
+message PersistCitationForLawFirmRequest {
+    string uni_pat_num = 1;
+    int64 family_id = 2;
+}
+
+message PersistCitationForLawFirmResponse {
+    enum PersistLawFirmResult {
+        OKAY = 0;
+    }
+    PersistLawFirmResult persist_result = 1;
+}
+
+message UpdateJpaResponse {
+    bool new_app_created = 1;
+    string uni_pat_num = 2;
+}
+
+message PatentPubRequest {
+    string app_no_ed = 1;
+    string doc_db_xml = 2;
+}
+
+message PatentPubResponse {
+    string app_no_ed = 1;
+    bool new_record = 2;
+    PatentPub patent_pub = 3;
+    bool unable_to_save = 4;
+}
+
+message GetNextServiceAddressForSortingRequest {
+    repeated LangType restrict_to_lang_types = 1; // Optional
+    repeated string restrict_to_office_codes = 2; // Optional
+
+    // Chance that the service will return a service address that has already been sorted,
+    // where 0.0 means never and 1.0 means always. Defaults to 0.0.
+    float already_sorted_weighted_chance = 3;
+}
+
+message GetNextServiceAddressFromPlaylistRequest {
+    string username = 1;
+    string playlist = 2;
+}

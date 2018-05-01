@@ -1,0 +1,89 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package pi_relational_db;
+option java_package = "pi.ip.data.relational.generated";
+option java_multiple_files = true;
+
+// This package is available via service definition PiKubeServiceImpl#IP_DATA_RELATIONAL_SERVICE_HOST
+// If running outside of cluster but need production services, e.g. google dataflow, be sure to set
+// CONF_PI_PROJECT_ID to the project id that is running the dataflow
+
+// -- *** NB: These methods should all be READ ONLY as service is provided at slave endpoints *** -- //
+
+import "patent_common.proto";
+import "google/protobuf/wrappers.proto";
+
+service RelationalLookupService {
+
+    // list of tables that the uniPatNum is current persisted to
+    rpc GetUniPatNumTableState (UniMsg) returns (UniPatNumTableResult) {
+
+    }
+
+    // Returns dump of ApplicantBasic table in `id` ASC order
+    rpc DumpApplicantBasicTable (DumpTableRequest) returns (stream AppBasicProto) {
+
+    }
+
+    // Returns dump of law_firm SQL table in `id` ASC order
+    rpc DumpLawFirmTable (DumpTableRequest) returns (stream LawFirm) {
+
+    }
+
+    // Returns dump of law_firm SQL table in `id` ASC order
+    rpc DumpServiceAddressTable (DumpTableRequest) returns (stream google.protobuf.Int64Value) {
+
+    }
+
+    // Returns aggregate filing information for given mySQL id corresponding to applicant_basic
+    rpc GetApplicantFilingSums (AppBasicProto) returns (ApplicantFilingSumResult) {
+
+    }
+
+    // Returns aggregate filing information for given law_firm_id
+    rpc GetLawFirmFilingSums (LawFirm) returns (LawFirmFilingSumResult) {
+
+    }
+}
+
+message LawFirmFilingSumResult {
+    repeated LawFirmFilingSumByOfficeCode law_firm_filing_sum = 1;
+
+    // list of 3 items used for the search by name index (values unrelated to perspective included)
+    // int64 values set => a. total_filed ; b. pending_pct ; c. total_agency
+    repeated LawFirmFilingSum search_index_list = 2;
+
+    // if set to true firm could not be found (i.e. possibly deleted between S1 and S2 or other border case)
+    bool firm_missing_from_db = 3;
+}
+
+message ApplicantFilingSumResult {
+    repeated ApplicantFilingSum applicantFilingSum = 1;
+
+    // whether found at least one joined row from 3 active patent tables to the applicant
+    bool joined_rows_found = 2;
+
+    int64 pending_pct_count = 3;
+}
+
+message UniPatNumTableResult {
+    //empty list indicates not found in any table
+    repeated TableType tableType = 1;
+}
+
+message ApplicantAggregateFilingResult {
+    // a separate result is returned for each time period
+    repeated ApplicantFilingSum result = 1;
+}
+
+message DumpTableRequest {
+    // results greater than (>) given start_db_id
+    int64 start_db_id = 1;
+
+    // limit result count to `result_limit` rows
+    int32 result_limit = 2;
+}
+

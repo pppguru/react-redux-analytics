@@ -1,0 +1,76 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+
+package pi_live_biblio;
+option java_package = "pi.ip.data.live.biblio.generated";
+option java_multiple_files = true;
+
+import "ip-datastore-common.proto";
+import "patent_common.proto";
+
+service LiveBiblioService {
+
+    rpc GetAgent (GetAgentRequest) returns (GetAgentResponse) {
+    }
+
+    // GetInventionTitle is available via datastore-sg3
+    // GetPatentApplicationPhase is available via datastore-sg3
+}
+
+message GetAgentRequest {
+    string uni_pat_num = 1;
+    bool prohibit_live_fetch = 2;
+    PatIdent pat_ident = 3;
+}
+
+message GetAgentResponse {
+    Status status = 1;
+
+    // This will always be set when Status == SUCCESS, otherwise blank
+    Identity agentIdentity = 2;
+}
+
+enum Status {
+    SUCCESS = 0;
+
+    // an IO_EXCEPTION
+    TRANSIENT_ERROR = 1;
+
+    // important note - `not found` means we could not find the patent by cache and live provider reports it is not
+    // published and/or invalid - it does not mean Agent not found.
+    NOT_FOUND = 2;
+
+    // means applicant field
+    RESULT_SELF_FILED = 3;
+
+    // an unexpected format exception
+    UNEXPECTED_ERROR = 4;
+
+}
+
+// PatFileTurkService is provided at DNS `pat-file-turk`
+service PatFileTurkService {
+
+    // GetAgentFiles will throw status exception in case of error
+    rpc GetAgentFiles (FetchCaseFilesRequest) returns (FilePathResponse) {
+    }
+
+    rpc GetAttorneyFiles (FetchCaseFilesRequest) returns (FilePathResponse) {
+    }
+
+    rpc GetCitationFiles (FetchCaseFilesRequest) returns (FilePathResponse) {
+    }
+
+}
+
+message FilePathResponse {
+    repeated string file_name = 1;
+}
+
+message FetchCaseFilesRequest {
+    string base_file_path = 1;
+    string app_number = 2;
+}

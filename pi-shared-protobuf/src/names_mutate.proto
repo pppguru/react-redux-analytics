@@ -1,0 +1,45 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+syntax = "proto3";
+package names_service;
+option java_package = "pi.ip.data.names.generated";
+option java_multiple_files = true;
+
+import "google/protobuf/wrappers.proto";
+import "names.proto";
+import "patent_common.proto";
+
+service NamesUpdateService {
+
+    // save applicant and inventor invention for a given uni_pat
+    rpc SavePartyByUniPat (SavePartyByUniPatRequest) returns (google.protobuf.BoolValue) {
+        // returns true or throws exception
+        // logic of applicant source update is in pi.ip.data.lookup_cache.service.names.ApplicantUpdater
+    }
+
+    // save applicant for a given uni_pat to static name/date cache in cache:appsByParty
+    rpc SaveApplicantFilings (SaveApplicantFilingRequest) returns (google.protobuf.BoolValue) {
+    }
+
+    rpc CalculateApplicantByFamily (google.protobuf.Int64Value) returns (ApplicantFamilyUpdateResult) {
+
+    }
+
+}
+
+message SaveApplicantFilingRequest {
+    int32 pub_date = 1;
+    PartyByUniPat party_by_uni_pat = 2;
+    int64 pub_doc_id = 3;
+    int64 family_id = 4;
+}
+
+message SavePartyByUniPatRequest {
+    int64 family_id = 1;
+    PartyByUniPat party_by_uni_pat = 2;
+}
+
+message ApplicantFamilyUpdateResult {
+    bool updated = 1;
+    ApplicantFamilySet applicant_family_set = 2;
+}

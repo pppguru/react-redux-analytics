@@ -1,0 +1,36 @@
+//
+// Copyright (c) 2017 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package pateventcode.generated;
+option java_package = "pi.ip.data.pateventcode.generated";
+option java_multiple_files = true;
+
+// This service is served by ip-datastore-onprem
+service PatEventCodeService {
+
+    rpc GetPatEventCode (GetPatEventCodeRequest) returns (PatEventCode) {
+    }
+}
+
+message GetPatEventCodeRequest {
+    string office_code = 1;
+    string event_code = 2;
+}
+
+message PatEventCode  {
+    string office_code = 1;
+    string event_code = 2;
+    LifecycleChange lifecycle_change = 3;
+    string descEn = 4;
+    string descOrig = 5;
+    int32 lastUpdate = 6;
+}
+
+enum LifecycleChange {
+    NEUTRAL = 0;
+    CONFIRMATORY = 1;
+    LAPSE_EVENT = 2;
+}
+

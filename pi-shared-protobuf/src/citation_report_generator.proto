@@ -1,0 +1,75 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+syntax = "proto3";
+option java_package = "io.practiceinsight.licensingalert.citationreportgenerator.generated";
+option java_multiple_files = true;
+
+import "google/api/annotations.proto";
+import "citation_search.proto";
+import "alert_manager.proto";
+
+package licensingalert;
+
+service CitationReportGeneratorService {
+    rpc GenerateHtmlReport (GenerateHtmlReportRequest) returns (HtmlReport) {
+        option (google.api.http) = {
+      post: "/la/api/v1/citations/generatehtmlreport"
+      body: "*"
+    };
+        option deprecated = true; //use GeneratePdfReport instead
+    }
+
+    rpc GeneratePdfReport (GeneratePdfReportRequest) returns (PdfReport) {
+        option (google.api.http) = {
+      post: "/la/api/v1/citations/generatepdfreport"
+      body: "*"
+    };
+    }
+}
+
+service NakedCitationReportGeneratorService {
+    rpc GenerateHtmlReport (GenerateHtmlReportRequest) returns (HtmlReport) {
+        option deprecated = true; //use GeneratePdfReport instead
+    }
+
+    rpc GeneratePdfReport (GeneratePdfReportRequest) returns (PdfReport) {
+    }
+
+    rpc GenerateAlertHtml (GenerateAlertHtmlRequest) returns (GenerateAlertHtmlResponse) {
+    }
+}
+
+message GenerateHtmlReportRequest {
+    Trigger trigger = 1;
+    repeated Citation citation_results = 2;
+    AggregateBy aggregate_by = 3 [deprecated=true];  // Field not used by backend. Trigger already has that information
+}
+
+message GenerateAlertHtmlRequest {
+    string recipient_name = 1;
+    string recipient_email = 2;
+    repeated Alert alerts = 3;
+}
+
+message HtmlReport {
+    string content = 1;
+}
+
+message GeneratePdfReportRequest {
+    Trigger trigger = 1;
+    CitationSearchRequest citation_search_request = 2;
+}
+
+message PdfReport {
+    string download_url = 1;
+}
+
+message GenerateAlertHtmlResponse {
+    repeated HtmlAlert html_alerts = 1;
+}
+
+message HtmlAlert {
+    string content = 1;
+    repeated string alert_ids = 2;
+    string recipient_email = 3;
+}

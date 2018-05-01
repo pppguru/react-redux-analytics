@@ -1,0 +1,132 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package pi_queue;
+option java_package = "pi.framework.queue.generated";
+option java_multiple_files = true;
+
+// Any reference to int queue_id in this protobuf file should use com.pi.common.core.queue.PiQueueName#getQueueId()
+// Use QueueOnPrem / KeyOnlyOnPrem queue types over this service
+
+service QueueService {
+    option deprecated = true;
+
+    // get next work item for a given queue_id
+    rpc GetNextWorkItem (GetNextWorkItemRequest) returns (GetNextWorkItemResponse) {
+        option deprecated = true;
+    }
+
+    // get next work items for a given queue_id with specified limit
+    rpc GetNextWorkItems (GetNextWorkItemsRequest) returns (GetNextWorkItemsResponse) {
+        option deprecated = true;
+    }
+
+    // Push a work item onto given queue id.
+    // on requesting save where work_item_key already exists in table,
+    //   - if incoming priority value is higher than existing work_item_key with lower priority value
+    //     then the new priority value will be saved, otherwise no action taken
+    rpc AddWorkItem (AddWorkItemRequest) returns (AddWorkItemResponse) {
+        option deprecated = true;
+    }
+
+    rpc DeleteWorkItem (DeleteWorkItemRequest) returns (WorkItemDeletedResponse) {
+        option deprecated = true;
+    }
+
+    // If delay_seconds is zero or missing, set pheonix date to now().
+    // If delay_seconds is set, then set pheonix date to now() + delay_seconds.
+    rpc DelayWorkItem (DelayWorkItemRequest) returns (WorkItemDelayResponse) {
+        option deprecated = true;
+    }
+
+}
+
+// glossary:
+//  a. `work_item_db_id` is the hex value of the mongo hex value for ObjectId
+//  b. `work_item_key` is an optional field, that if specified should be unique to any given `queue_id`
+
+message GetNextWorkItemRequest {
+    option deprecated = true;
+    int32 queue_id = 1;
+    int32 lock_time_seconds = 2;
+	bool sort_priority = 3;
+}
+
+message GetNextWorkItemResponse {
+    option deprecated = true;
+    enum GetNextResultCode {
+        SUCCESS = 0;
+        NO_PENDING_WORK_ITEMS_FOR_QUEUE = 1;
+    }
+    GetNextResultCode result_code = 1;
+    WorkItem next_work_item = 2;
+}
+
+message GetNextWorkItemsRequest {
+    option deprecated = true;
+    int32 queue_id = 1;
+    int32 lock_time_seconds = 2;
+    int32 limit = 3;
+	bool sort_priority = 4;
+}
+
+message GetNextWorkItemsResponse {
+    option deprecated = true;
+    enum GetNextResultsCode {
+        SUCCESS = 0;
+        NO_PENDING_WORK_ITEMS_FOR_QUEUE = 1;
+    }
+    GetNextResultsCode result_code = 1;
+    repeated WorkItem next_work_items = 2;
+}
+
+message WorkItem {
+    option deprecated = true;
+    int32 queue_id = 1;
+    string work_item_db_id = 2;
+    string payload = 3;
+    int32 priority = 4;
+    repeated string search = 5;
+    int64 delay_seconds = 6;
+    string work_item_key = 7;
+	int32 attempt_count = 8;
+	int32 fail_count = 9;
+}
+
+message AddWorkItemRequest {
+    option deprecated = true;
+    int32 queue_id = 1; // required
+    string payload = 2;
+    string work_item_key = 3; // optional - a unique key for given queue_id
+    int32 priority = 4;
+    repeated string search = 5;
+    int64 delay_seconds = 6;
+}
+
+message AddWorkItemResponse {
+    // empty
+}
+
+message DeleteWorkItemRequest {
+    option deprecated = true;
+    string work_item_db_id = 1;
+}
+
+message DelayWorkItemRequest {
+    option deprecated = true;
+    string work_item_db_id = 1;
+    int32 delay_seconds = 2;
+}
+
+message WorkItemDeletedResponse {
+    option deprecated = true;
+    // empty
+}
+
+message WorkItemDelayResponse {
+    option deprecated = true;
+    // empty
+}
+

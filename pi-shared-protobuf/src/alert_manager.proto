@@ -1,0 +1,177 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+syntax = "proto3";
+option java_package = "io.practiceinsight.licensingalert.alertmanager.generated";
+option java_multiple_files = true;
+
+// For optional types
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+option (scalapb.options) = {
+  primitive_wrappers: true
+};
+
+import "google/api/annotations.proto";
+import "citation_search.proto";
+
+package licensingalert;
+
+service AlertManagerService {
+    rpc Create (CreateAlertRequest) returns (AlertCreated) {
+    }
+
+    rpc Get (GetAlertRequest) returns (Alert) {
+        option (google.api.http) = {
+      get: "/la/api/v1/alerts/{alert_id}"
+    };
+    }
+
+    rpc FindByFolder (FindByFolderRequest) returns (FindAlertsResult) {
+        option (google.api.http) = {
+      post: "/la/api/v1/alertsbyfolder"
+      body: "*"
+    };
+    }
+
+    rpc Move (MoveAlertRequest) returns (AlertMoved) {
+        option (google.api.http) = {
+      post: "/la/api/v1/alerts/move"
+      body: "*"
+    };
+    }
+
+    rpc FindUsersWithAlerts (FindUsersWithAlertsRequest) returns (FindUsersResult) {
+    }
+
+    rpc FindUsersWithPendingEmailAlerts (FindUsersWithPendingEmailAlertsRequest) returns (FindUsersResult) {
+    }
+
+    rpc StreamUserIdsWithPendingEmailAlerts (FindUsersWithPendingEmailAlertsRequest) returns
+        (stream google.protobuf.StringValue) {
+    }
+
+    rpc FindByDate (FindByDateRequest) returns (FindAlertsResult) {
+    }
+
+    rpc FindPendingEmailAlerts (FindPendingEmailAlertsRequest) returns (FindAlertsResult) {
+    }
+
+    rpc StreamPendingEmailAlerts (FindPendingEmailAlertsRequest) returns (stream Alert) {
+    }
+
+    rpc UpdateAlertsEmailSent (UpdateAlertsEmailSentRequest) returns (AlertsEmailSentUpdated) {
+    }
+}
+
+message CreateAlertRequest {
+    string user_id = 1;
+    Citation citation = 2;
+    Trigger trigger = 3;
+}
+
+message AlertCreated {
+    string alert_id = 1;
+}
+
+message GetAlertRequest {
+    string alert_id = 1;
+}
+
+message Alert {
+    string alert_id = 1;
+    string user_id = 2;
+    Folder folder = 3;
+    string created = 4;
+    Citation citation = 5;
+    google.protobuf.StringValue email_sent = 6; // Optional field
+    repeated Trigger triggers = 7;
+}
+
+message Trigger {
+    string filter_id = 1;
+    string filter_name = 2;
+    repeated FilterRuleDescription filter_rule_descriptions = 3;
+    AggregateBy aggregate_by = 4;
+}
+
+enum AggregateBy {
+    NEW_CASE = 0;
+    PRIOR_ART_CITED = 1;
+}
+
+message FilterRuleDescription {
+    message List {
+        string label = 1;
+        repeated string items = 2;
+    }
+    message Switch {
+        string label = 1;
+        bool on = 2;
+    }
+    message Selection {
+        string label = 1;
+        string value = 2;
+    }
+
+    oneof type {
+        List list = 1;
+        Switch switch = 2;
+        Selection selection = 3;
+    }
+}
+
+message FindByFolderRequest {
+    string user_id = 1;
+    Folder folder = 2;
+    int32 fetch_offset = 3;
+    int32 fetch_limit = 4;
+}
+
+message FindAlertsResult {
+    repeated Alert alerts = 1;
+    int64 total_count = 2;
+}
+
+enum Folder {
+    INBOX = 0;
+    SHORTLIST = 1;
+    ARCHIVE = 2;
+}
+
+message MoveAlertRequest {
+    string alert_id = 1;
+    Folder folder = 2;
+}
+
+message AlertMoved {
+}
+
+message FindUsersWithAlertsRequest {
+    string fromCreated = 1;
+    string toCreated = 2;
+}
+
+message FindUsersWithPendingEmailAlertsRequest {
+}
+
+message FindUsersResult {
+    repeated string user_ids = 1;
+}
+
+message FindByDateRequest {
+    string user_id = 1;
+    string fromCreated = 2;
+    string toCreated = 3;
+}
+
+message FindPendingEmailAlertsRequest {
+    string user_id = 1;
+}
+
+message UpdateAlertsEmailSentRequest {
+    repeated string alert_ids = 1;
+    google.protobuf.StringValue email_sent = 2; // Optional, unsets current value if not present
+}
+
+message AlertsEmailSentUpdated {
+}

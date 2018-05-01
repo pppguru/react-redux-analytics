@@ -1,0 +1,144 @@
+syntax = "proto3";
+option java_package = "io.practiceinsight.licensingalert.citation.query.generated";
+option java_multiple_files = true;
+//make sure this can be used in grpc gateway
+option go_package = "licensingalert";
+
+import "google/api/annotations.proto";
+import "patent_common.proto";
+import "cite_service.proto";
+
+
+service CitationSearchService {
+    // Citation Search Service is used in CitaitonEagle
+    rpc Search (CitationSearchRequest) returns (CitationSearchResult) {
+        option (google.api.http) = {
+          post: "/la/api/v1/citations/search"
+          body: "*"
+        };
+    }
+}
+
+service NakedCitationSearchService {
+    // Naked Service is used inside firewall without security check, e.g alerg generation
+    rpc Search (CitationSearchRequest) returns (CitationSearchResult) {
+    }
+
+    rpc FindNewAlerts (FindNewAlertsRequest) returns (FindNewAlertsResult) {
+    }
+}
+
+message Citation {
+    int64 pac_law_firm_id = 1;
+    string pac_law_firm_name = 2;
+    string pac_law_firm_country = 3;
+    string pac_app_no_uni_pat = 4;
+    string pac_app_no_orig = 5; // will include office code
+    int64 pac_family_id = 6;
+    string pac_title = 7;
+    repeated Applicant pac_applicants = 8;
+
+    string nc_app_no_uni_pat = 9;
+    string nc_app_no_orig = 10; // will include office code
+    int64 nc_family_id = 11;
+    string nc_title = 12;
+    repeated Applicant nc_applicants = 13;
+
+    cite_service.CiteType cite_type = 14;
+    int64 first_cited_date = 15;
+    cite_service.PacHealth pac_health = 16;
+    cite_service.CasePhase nc_phase = 17;
+
+}
+
+// LastRaisedDateFilter must present with
+// ApplicantOfPacIn or LawFirmOfPacIn
+message CitationSearchRequest {
+    repeated FilterRule filter_rules = 1;
+    int32 fetch_limit = 2; // used by search in web front end Math.MIN(value,100)
+}
+
+message FindNewAlertsRequest {
+    repeated FilterRule filter_rules = 1;
+    int64 min_modification_date_utc = 2; // used by alert generator
+    int64 max_modification_date_utc = 3; // used by alert generator
+}
+
+message FindNewAlertsResult {
+    repeated Citation citations = 1;
+    int64 total_count = 2;
+}
+
+message CitationSearchResult {
+    repeated Citation citations = 1;
+    int64 total_count = 2;
+}
+
+message FilterRule {
+    oneof type {
+        // search query will always contain either an applicant or law firm filter
+        ApplicantOfPacIn applicant_of_pac_in = 1;
+        LawFirmOfPacIn law_firm_of_pac_in = 2;
+
+        // filtered as stream + date updated
+        PacCitesToHealth pac_health = 3;
+
+        // filtered as stream + date updated
+        NcProsecutionPhase nc_prosecution_phase = 4;
+
+        // Of results found, exclude any where Pac applicant is in this list
+        // Non-indexed / results filtered in-memory
+        ApplicantOfPacNotIn applicant_of_pac_not_in = 5;
+
+        // Of results found, exclude any where
+        MinimumCiteType minimum_cite_type = 6;
+
+        FirstCitedDateAfter first_cited_date_after = 7;
+
+        // Of results found, exclude any where Nc applicant is in this list
+        // Non-indexed / results filtered in-memory
+        ApplicantOfNcIn applicant_of_nc_in = 8;
+    }
+}
+
+message ApplicantOfPacIn {
+    repeated string applicant_names = 1;
+}
+
+message ApplicantOfNcIn {
+    repeated string applicant_names = 1;
+}
+
+message LawFirmOfPacIn {
+    repeated int64 law_firm_ids = 2;
+}
+
+enum PatentHealthFilter {
+    ALL_HEALTH = 0;
+    ALIVE_ONLY = 1;
+}
+
+message PacCitesToHealth {
+    PatentHealthFilter health_filter = 1;
+}
+
+message NcProsecutionPhase {
+    NcProsecutionPhaseFilter nc_phase_filter = 1;
+}
+
+enum NcProsecutionPhaseFilter {
+    ALL_PHASES = 0;
+    ACCEPTED_ONLY = 1;
+}
+
+message ApplicantOfPacNotIn {
+    repeated string applicant_names = 1;
+}
+
+message MinimumCiteType {
+    cite_service.CiteType cite_type = 1;
+}
+
+message FirstCitedDateAfter {
+    int64 date = 1;
+}

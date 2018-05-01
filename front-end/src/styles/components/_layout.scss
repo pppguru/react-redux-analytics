@@ -1,0 +1,10 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+.mdl-layout {
+  perspective: 10000px;
+}
+
+.mdl-layout__content {
+  padding: 32px;
+  overflow-x: auto;
+}

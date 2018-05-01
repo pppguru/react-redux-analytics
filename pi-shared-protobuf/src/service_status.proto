@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package service_status;
+
+option java_package = "pi.service.status.generated";
+option java_multiple_files = true;
+
+service HealthCheck {
+    // Used to confirm that the server is responding to requests
+    rpc Status (HealthCheckRequest) returns (HealthCheckResult) {
+    }
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckResult {
+    enum HealthStatus {
+        OK = 0;
+        UPSTREAM_FAILURE = 1;
+    }
+
+    // returns OK in response Status method
+    HealthStatus status = 1;
+}

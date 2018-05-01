@@ -1,0 +1,141 @@
+//
+// Copyright (c) 2017 Practice Insight Pty Ltd. All rights reserved.
+//make
+
+syntax = "proto3";
+package ana_aggregate;
+option java_package = "pi.ip.proto.generated";
+option java_multiple_files = true;
+
+import "google/protobuf/wrappers.proto";
+import "patent_common.proto";
+
+// This service is available on both sg3 cluster (which connects to Mongo slave node), and on-prem cluster (use case rare).
+service AnaAggregateCacheService {
+
+    // returns a value DESC list up to a maximum number of results for the given request particulars
+    // any "zero" value results are ignored/not returned
+    rpc FindApplicantFilingsByCountry (ApplicantFilingsLookup) returns (ApplicantFilingsResult) {
+
+    }
+
+    rpc FetchLawFirmFilingsByCountry (LawFirmCountrySearchRequest) returns (stream LawFirmFilingSumByOfficeCode) {
+
+    }
+
+    rpc GetLawFirmFilingsSum (LawFirmSearchGroupRequest) returns (LawFirmFilingsSumResult) {
+
+    }
+}
+
+message LawFirmFilingsSumResult {
+    repeated LawFirmFilingSumByOfficeCode result = 1;
+}
+
+message LawFirmSearchGroupRequest {
+    repeated LawFirmSearchRequest search_request = 1;
+}
+
+message LawFirmSearchRequest {
+    string office_code = 1;
+    int64 law_firm_id = 2;
+    TimePeriod time_period = 3;
+}
+
+message LawFirmCountrySearchRequest {
+    string office_code = 1;
+    string law_firm_country = 2;
+    TimePeriod time_period = 3;
+}
+
+// This service is only available on the on-prem cluster (which connects to Mongo master node, which permits writes).
+service AnaAggregateUpdateService {
+
+    // Requests that the current `building` collection is promoted/rolled to `production`.
+    // Return whether the action was executed successfully (true = success).
+    rpc RollToProduction (AnaDeployRequest) returns (google.protobuf.BoolValue) {
+
+    }
+
+    // Request to update given row.  Returns true or otherwise throws exception on error.
+    rpc UpsertApplicantFilingSums (UpsertApplicantFilingSumRequest) returns (google.protobuf.BoolValue) {
+
+    }
+
+    // Request to update given LawFirmFilingSum record.  Returns true or otherwise throws exception on error.
+    rpc UpsertLawFirmFilingSums (UpsertLawFirmFilingSumRequest) returns (google.protobuf.BoolValue) {
+
+    }
+
+    // increment occurrence of given word list supplied
+    rpc IncrementWordsLawFirm (WordList) returns (google.protobuf.BoolValue) {
+
+    }
+
+    rpc IncrementWordsAppAppBasicNameDd (WordList) returns (google.protobuf.BoolValue) {
+
+    }
+
+}
+
+// This service is only available on the on-prem cluster (which connects to Mongo master node, which permits writes).
+service AggregateServiceLawMatchService {
+
+    rpc getDistinctWordsLawFirm (DistinctWordListRequest) returns (WordList) {
+
+    }
+
+    rpc getDistinctWordsAppBasicNameDd (DistinctWordListRequest) returns (WordList) {
+
+    }
+
+}
+
+message DistinctWordListRequest {
+    repeated string word = 1;
+    int32 frequency_limit = 2;
+}
+
+message WordList {
+    repeated string word = 1;
+}
+
+message UpsertLawFirmFilingSumRequest {
+    repeated LawFirmFilingSumByOfficeCode law_firm_filings = 1;
+}
+
+message AnaDeployRequest {
+    AggregateType aggregate_type = 1;
+    bool need_validation = 2;
+}
+
+enum AggregateType {
+    ApplicantFilings = 0;
+    LawFirmFilings = 1;
+    ServiceLawWordFrequency = 2;
+    AppBasicNameDdWordFrequency = 3;
+}
+
+message ApplicantFilingsLookup {
+    enum ApplicantAggOrderField {
+        PatAppOrder = 0;
+        NpeOrder = 1;
+        ParisOrder = 2;
+        CrossJurisOrder = 3;
+        PendingPctOrder = 4;
+    }
+
+    string client_perspective_code = 1;
+    TimePeriod time_period = 2;
+    string applicant_country = 3;
+    int32 max_result_size = 4;
+    ApplicantAggOrderField result_order_field = 5;
+}
+
+message ApplicantFilingsResult {
+    repeated ApplicantFilingSum result_list = 1;
+}
+
+message UpsertApplicantFilingSumRequest {
+    repeated ApplicantFilingSum applicant_filing = 1;
+}

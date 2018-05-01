@@ -1,0 +1,86 @@
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+
+syntax = "proto3";
+option java_package = "io.practiceinsight.licensingalert.citation.update.generated";
+option java_multiple_files = true;
+
+import "google/protobuf/wrappers.proto";
+import "google/api/annotations.proto";
+import "cite_service.proto";
+// import "citation_search.proto";
+import "patent_common.proto";
+
+package licensingalert;
+
+// Used to update the search index when records are new or discovered
+// This is used to update the data used by `CitationSearchService` and `NakedCitationSearchService`
+// See PiKubeServiceImpl#IP_CITE_SERVICE_HOST
+service CitationUpdateService {
+
+    // returns whether the citation was persisted for the first time
+    rpc UpsertDirectCitation (DirectCitationUpsert) returns (google.protobuf.BoolValue) {
+
+    }
+
+    rpc UnsetRefreshMember (google.protobuf.Int64Value) returns (AckResponse) {
+        // unset given familyId in CiteFamLink#refreshMembers
+        // CiteFamLink#refreshMembers is a set in mongo document
+        // should unset it when $exists: CiteFamLink#refreshMembers and CiteFamLink#refreshMembers.hasAnyOf(familyId)
+        // use Mophia updateQuery to do this
+    }
+
+    // rpc SetApplicant
+
+    // rpc AddPacOriginatingApp
+
+    // rpc AddFamilyApp
+
+    // rpc SetInventionTitle
+
+    // rpc SetCiteType
+
+    // rpc SetPacHealth
+
+    // rpc SetNcCasePhase
+
+}
+
+
+message FamIdUpdate {
+    google.protobuf.Int64Value fam_id = 1;
+    CiteStoreTriggerType trigger_type = 2;
+}
+
+message DirectCitationUpsert {
+    cite_service.DirectCite direct_cite = 1;
+
+    // earliest date known for family, either application or publication dates
+    int32 earliest_pac_fam_date = 2;
+}
+
+enum SideOfFam {
+    // useful enum used in some contexts
+    UNDEFINED = 0;
+    NC_SIDE = 1;
+    PAC_SIDE = 2;
+}
+
+enum CiteStoreTriggerType {
+    UndefinedDefaultTriggerType = 0;
+
+    // stored is set - use unwind for grouping
+    RefreshMembers = 1;
+
+    // stored is set - use unwind for grouping
+    RefreshApplicants = 2;
+
+    // stored as field (when exists include it)
+    RefreshHealthPac = 3;
+
+    // stored as field (when exists include it)
+    RefreshLawFirmsPac = 4;
+
+    // stored as field (when exists include it)
+    RefreshCasePhaseNc = 5;
+
+}

@@ -1,0 +1,6 @@
+src/grpc-gateway/generated/
+src/github.com/
+bin/
+pkg/
+
+.idea/

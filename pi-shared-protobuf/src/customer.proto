@@ -1,0 +1,300 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+package pi_customer_priv;
+option java_package = "pi.customer.generated";
+option java_multiple_files = true;
+
+service UserService {
+    // Returns Status.NOT_FOUND error if userId invalid or account not active
+    rpc GetUserInfo (GetUserInfoRequest) returns (UserInfo) {
+    }
+
+    // Update country field for given user id
+    rpc UpdateUserCountry (UpdateUserCountryRequest) returns (UpdateUserCountryResponse) {
+    }
+
+    // Returns an Invalid Argument error (code 3) if the access token is invalid or has expired
+    rpc DecodeAccessToken (DecodeAccessTokenRequest) returns (UserContext) {
+    }
+    // Generate a valid access token for given user id
+    // This method is mainly used in FA report generation process to simulate user login in backend
+    rpc GenerateAccessToken (GenerateAccessTokenRequest) returns (GenerateAccessTokenResponse) {
+    }
+
+    // Check whether the user has a valid, current licence for the given licence type
+    rpc CheckUserLicence (CheckUserLicenceRequest) returns (CheckUserLicenceResponse) {
+    }
+
+    // Returns licences for the given user id. Optionally only return currently valid licences.
+    rpc GetUserLicences (GetUserLicencesRequest) returns (GetUserLicencesResponse) {
+    }
+}
+
+service FASupportService {
+    // Get remaining report number for given user
+    // phrase 1 : map logic from ConsumableItemService#checkRemainingForUser
+    // phrase 1 : product code is ProductCode.AnalyticsOnDemand
+    // phrase 2 : use SF to store fa free report number in table account
+    rpc GetFreeReportNum (GetFreeReportNumRequest) returns (GetFreeReportNumResponse) {
+    }
+    // Decrease given user's free report number , apply -- logic
+    // phrase 1 : map logic from ConsumableItemService#consumeByUser
+    // phrase 2 : use SF to store fa free report number in table account
+    rpc DecreaseFreeReportNum (DecreaseFreeReportNumRequest) returns (DecreaseFreeReportNumResponse) {
+    }
+    // Upload generated FA report to s3 for further tracking
+    // phrase 1 : map logic from PurchasedItemService#uploadPurchasedFileOfUser
+    // phrase 1 : product code is ProductCode.AnalyticsOnDemand
+    // phrase 2 : use SF to store fa free report metadata in table ReportHistory
+    rpc UploadReport (UploadReportRequest) returns (UploadReportResponse) {
+    }
+    // Get report price for given user based on user's currency
+    // phrase 1 : map logic from ProductService#getProductPrice
+    // phrase 2 : use use SF to store in table Price Book Entry
+    rpc GetReportPrice (GetReportPriceRequest) returns (GetReportPriceResponse) {
+    }
+    // phrase 1 : migrate logic from CartService#addFAReportToUserCart
+    // phrase 2 : use SF to store fa free report number in table account
+    rpc AddReportToCart (AddReportToCartRequest) returns (AddReportToCartResponse) {
+    }
+}
+
+service WTSupportService {
+    // Find the list of users being managed by the current user for the given team.
+    // Returns: The list of users being handled by the currently logged in user.
+    rpc GetManagedUsers (GetManagedUsersRequest) returns (GetManagedUsersResponse) {
+    }
+
+    // Get info about the Team with the given ID.
+    // Returns Status.NOT_FOUND if the given team_id does not match any Teams.
+    rpc GetTeam (GetTeamRequest) returns (Team) {
+    }
+
+    // Return the list of users in the given team (userId list only)
+    rpc GetTeamUserIds (GetTeamUserIdsRequest) returns (GetTeamUserIdsResponse) {
+    }
+
+    // Return the list of users in the given team (userId list only)
+    rpc GetAllUserIds (GetAllUserIdsRequest) returns (GetAllUserIdsResponse) {
+    }
+
+    rpc GetWTEnforcingTag (GetWTEnforcingTagRequest) returns (GetWTEnforcingTagResponse) {
+    }
+
+    rpc SetWTEnforcingTag (SetWTEnforcingTagRequest) returns (SetWTEnforcingTagResponse) {
+    }
+}
+
+message GetFreeReportNumRequest {
+    string user_id = 1;
+}
+message GetFreeReportNumResponse {
+    int64 free_report_num = 1;
+}
+message DecreaseFreeReportNumRequest {
+    string user_id = 1;
+}
+message DecreaseFreeReportNumResponse {
+}
+message UploadReportRequest {
+    string user_id = 1;
+    string file_name = 2;
+    string file_description = 3;
+    string file_content_base64 = 4;
+}
+message UploadReportResponse {
+}
+message GetReportPriceRequest {
+    string user_id = 1;
+}
+message AddReportToCartRequest {
+    string user_id = 1;
+    string display_name = 2;
+    int64 firm_id = 3;
+}
+message AddReportToCartResponse {
+
+}
+message GetReportPriceResponse {
+    double price = 1;
+    string currency = 2;
+    string currency_symbol = 3;
+}
+message UserInfo {
+    string user_id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string user_photo = 4;
+    string email = 5;
+    string country = 6;
+    string phone = 7;
+    string state = 8;
+    string address = 9;
+    string zip_code = 10;
+    // These fields needed to support WiseTime
+    string timezone = 11;
+    repeated TeamMembership team_membership = 12;
+}
+
+message GetUserInfoRequest {
+    string user_id = 1;
+    bool include_inactive_memberships = 2;
+}
+
+message UpdateUserCountryRequest {
+    string user_id = 1;
+    string country = 2;
+}
+message UpdateUserCountryResponse {
+
+}
+
+message DecodeAccessTokenRequest {
+    string access_token = 1;
+}
+
+// Decoded information encapsulated within an AccessToken
+message UserContext {
+    string user_id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string title = 4;
+    string email = 5;
+    repeated Licence licences = 6;
+    repeated Team teams = 7;
+    int64 expiry = 8; // Milliseconds since the epoch
+    string timezone = 9;
+    string country = 10;
+    repeated string extra_countries = 11;
+    string user_photo = 12;
+    bool is_ios_unlimited = 13;
+    bool is_au_prohibited = 14;
+}
+
+message Licence {
+
+    // String description of the licence type, kept for legacy reasons. Prefer usage of the licence_type field.
+    string type = 1;
+
+    int64 expiry = 2;  // Milliseconds since the epoch
+    bool subscribed = 3 [deprecated = true];
+    LicenceType licence_type = 4;
+}
+
+// TODO(Scott) Add any missing licence types here
+enum LicenceType {
+    ANALYTICS_ON_DEMAND = 0;
+    ANALYTICS_STD = 1;
+    CITATION_EAGLE = 2;
+    WISETIME = 3; // deprecated, should be removed once the SF branch is merged to master
+    WISETIME_BASIC = 4;
+    WISETIME_TEAM = 5;
+    WISETIME_ENTERPRISE = 6;
+}
+
+
+message Team {
+    string id = 1;
+    string name = 2;
+    string region_code = 3 [deprecated = true];
+}
+
+// Needed by WiseTime to identify which users belong to which Team and their rights in each Team
+message TeamMembership {
+    // What Team is the user a member of?
+    Team team = 1;
+    // What rights does the user have within this Team?
+    Authority authority = 2;
+    // NEW - What is the membership status in this Team?
+    MembershipStatus status = 3;
+}
+
+// Represents the rights a user has within a Team.
+// Note: a higher-level authority implies the user also has all lower-level authorities.
+// e.g. if OWNER, then both MEMBER and MANAGER are implied.
+enum Authority {
+    MEMBER = 0;     // no special priveleges, cannot view other members
+    MANAGER = 1;    // can manage tags, can view other members
+    OWNER = 2;      // can add/remove members
+    SYSADMIN = 3;      // system admin in Practice Insight
+}
+
+// Represents user's membership status in a Team
+enum MembershipStatus {
+    ACTIVE = 0;
+    PENDING = 1;
+    INACTIVE = 2;
+}
+
+message GenerateAccessTokenRequest {
+    string user_id = 1;
+}
+message GenerateAccessTokenResponse {
+    string access_token = 1;
+}
+
+message CheckUserLicenceRequest {
+    string user_id = 1;
+    LicenceType licence_type = 2;
+}
+
+message CheckUserLicenceResponse {
+    bool valid = 1;
+}
+
+message GetUserLicencesRequest {
+    string user_id = 1;
+    bool only_valid_licences = 2;  // Only return licences that are currently valid
+}
+
+message GetUserLicencesResponse {
+    repeated Licence licences = 1;
+}
+
+message GetManagedUsersRequest {
+    string user_id = 1; // the userId of the user making the request. Must be Authority.MANAGER (or higher), or empty list
+    string team_id = 2; // the team ID to fetch user list (formerly org_id)
+    bool include_inactive = 3; // NEW - set this to true to request ALL users, including INACTIVE (default is false)
+}
+
+message GetManagedUsersResponse {
+    repeated UserInfo users = 1;
+}
+
+message GetTeamRequest {
+    string team_id = 1;
+}
+
+message GetTeamUserIdsRequest {
+    string team_id = 1; // the team ID to fetch user list (formerly org_id)
+}
+
+message GetTeamUserIdsResponse {
+    repeated string user_ids = 1;
+}
+
+message GetAllUserIdsRequest {
+}
+
+message GetAllUserIdsResponse {
+    repeated string user_ids = 1;
+}
+
+message GetWTEnforcingTagRequest {
+    string team_id = 1;
+}
+
+message GetWTEnforcingTagResponse {
+    bool enforcing_tag = 1;
+}
+
+message SetWTEnforcingTagRequest {
+    string team_id = 1;
+    bool enforcing_tag = 2;
+}
+
+message SetWTEnforcingTagResponse {
+}

@@ -1,0 +1,65 @@
+//
+// Copyright (c) 2016 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+option java_package = "pi.ip.data.unitary.generated";
+option java_multiple_files = true;
+
+enum SaveResult {
+    SUCCESS = 0;
+    IP_RIGHT_NOT_FOUND = 1;
+}
+
+message PatPackProto {
+    option deprecated = true;
+
+    // e.g. AU20150123456U
+    string num_ed = 1;
+
+    // e.g. 20150123456
+    string num_orig = 2;
+
+    // e.g. AU
+    string office_code = 3;
+
+    // yyyyMMdd
+    int32 date = 4;
+
+    // e.g. B2
+    string kind_orig = 5;
+
+    // do not use value of 6 (kind_orig_trunc removed)
+
+    // full docdb kind code e.g. A2
+    string kind_dd = 7;
+
+    // do not use value of 8 (kind_dd_trunc removed)
+
+    // e.g. 20479
+    string num_dd = 9;
+
+    // e.g. 75465412137
+    int64 doc_id = 10;
+
+    // e.g. US
+    string country_dd = 11;
+
+    // mandatory
+    PackType pack_type = 12;
+
+    // e.g. AU$123456$A$20150231 - only applicable to an APPLICATION (NOT a publication)
+    string uni_pat_num = 13 [deprecated = true];
+
+    // The value 0L is used here to indicate that familyId is null
+    int64 family_id = 14;
+
+    bool is_representative = 15;
+
+}
+
+enum PackType {
+    option deprecated = true;
+    APPLICATION = 0;
+    PUBLICATION = 1;
+}

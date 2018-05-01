@@ -1,0 +1,197 @@
+//
+// Copyright (c) 2017 Practice Insight Pty Ltd. All rights reserved.
+//
+
+syntax = "proto3";
+option java_package = "pi.admin.service_address_sorting.generated";
+option java_multiple_files = true;
+option go_package = "licensingalert";
+
+import "patent_common.proto";
+import "google/api/annotations.proto";
+
+service ServiceAddressSortingService {
+
+    rpc NextUnsortedServiceAddress (NextUnsortedServiceAddressRequest) returns (ServiceAddressBundle) {
+        // Get next service address to sort
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/nextunsortedserviceaddress"
+          body: "*"
+        };
+    }
+
+    rpc SearchLawFirms (SearchLawFirmsRequest) returns (SearchResults) {
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/searchlawfirms"
+          body: "*"
+        };
+    }
+
+    rpc AssignServiceAddress (AssignServiceAddressRequest) returns (AssignServiceAddressResponse) {
+        // Assign a service address to a law firm (MySQL)
+        // Updates lawfirm_service_address_v1 ES index at http://es-1.hatchedpi.com:9200/_cat/indices
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/assignserviceaddress"
+          body: "*"
+        };
+    }
+
+    rpc UnsortServiceAddress (UnsortServiceAddressRequest) returns (UnsortServiceAddressResponse) {
+        // Unassign a service address from its law firm if any, set law_firm_entity_checked to false (MySQL)
+        // Updates lawfirm_service_address_v1 ES index at http://es-1.hatchedpi.com:9200/_cat/indices
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/unsortserviceaddress"
+          body: "*"
+        };
+    }
+
+    rpc SkipServiceAddress (SkipServiceAddressRequest) returns (SkipServiceAddressResponse) {
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/skipserviceaddress"
+          body: "*"
+        };
+    }
+
+    rpc CreateLawFirm (CreateLawFirmRequest) returns (CreateLawFirmResponse) {
+        // Creates a new law firm and assigns the service address to it (MySQL)
+        // Updates ES indexes at http://es-1.hatchedpi.com:9200/_cat/indices
+        // * lawfirm
+        // * lawfirm_service_address_v1
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/createlawfirm"
+          body: "*"
+        };
+    }
+
+    rpc SetServiceAddressAsNonLawFirm (SetServiceAddressAsNonLawFirmRequest) returns (SetServiceAddressAsNonLawFirmResponse) {
+        // Mark the agent for a service address as a non law firm
+        // Updates ip-data-relational / MySQL
+        // lawfirm_service_address_v1 index used for suggestions
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/setserviceaddressasnonlawfirm"
+          body: "*"
+        };
+    }
+
+    rpc InsufficientInfoToSort (SetInsufficientInfoStatusRequest) returns (SetInsufficientInfoStatusResponse) {
+        // Indicate that it's impossible to sort this service address
+        // Current behavious is to delay this service address by one month
+        // In the future we will mark the service address as impossible to sort and not offer it for sorting anymore
+        option (google.api.http) = {
+          post: "/int/api/v1/addressing/insufficientinfotosort"
+          body: "*"
+        };
+    }
+
+}
+
+message NextUnsortedServiceAddressRequest {
+    string requested_by = 1;  // Username
+}
+
+message ServiceAddressBundle {
+    ServiceAddress service_address_to_sort = 1;
+    string en_translation = 2;
+    repeated Agent suggested_agents = 3;
+    repeated SamplePatentApp sample_patent_apps = 4;
+}
+
+message Agent {
+    oneof type {
+        LawFirm law_firm = 1;
+        NonLawFirm non_law_firm = 2;  // Self-filed
+    }
+    repeated ServiceAddress service_addresses = 3;
+}
+
+message NonLawFirm {
+    string name = 1;
+}
+
+message SamplePatentApp {
+    string app_num = 2;
+    repeated string applicants = 3;
+}
+
+message SearchLawFirmsRequest {
+    string requested_by = 1;
+    string search_term = 2;
+    string country_code = 3;
+}
+
+message SearchResults {
+    repeated Agent law_firm_agents = 1;  // Will only contain Agents of type LawFirm
+}
+
+message AssignServiceAddressRequest {
+    string requested_by = 1;
+    int64 service_address_id = 2;
+    int64 law_firm_id = 3;
+}
+
+message AssignServiceAddressResponse {
+    SortEffect sort_effect = 1;
+    SortResult sort_result = 2;
+    SortAssignment expected_sort_assignment = 3;  // Only set if we are comparing against an existing sort
+}
+
+message UnsortServiceAddressRequest {
+    string requested_by = 1;
+    int64 service_address_id = 2;
+}
+
+message UnsortServiceAddressResponse {
+}
+
+message SkipServiceAddressRequest {
+    string requested_by = 1;
+    int64 service_address_id = 2;
+}
+
+message SkipServiceAddressResponse {
+}
+
+message CreateLawFirmRequest {
+    string requested_by = 1;
+    string name = 2;
+    string state = 3;
+    string country_code = 4;
+    string website_url = 5;
+    ServiceAddress service_address = 6;
+}
+
+message CreateLawFirmResponse {
+    SortEffect sort_effect = 1;
+    SortResult sort_result = 2;
+    oneof outcome {
+        SortAssignment expected_sort_assignment = 3;  // Only set if we are comparing against an existing sort
+        int64 new_law_firm_id = 4;  // Available if a new law firm was created
+    }
+}
+
+message SetServiceAddressAsNonLawFirmRequest {
+    string requested_by = 1;
+    int64 service_address_id = 2;
+}
+
+message SetServiceAddressAsNonLawFirmResponse {
+    SortEffect sort_effect = 1;
+    SortResult sort_result = 2;
+    SortAssignment expected_sort_assignment = 3;  // Only set if we are comparing against an existing sort
+}
+
+message SetInsufficientInfoStatusRequest {
+    string requested_by = 1;
+    int64 service_address_id = 2;
+}
+
+message SetInsufficientInfoStatusResponse {
+    SortEffect sort_effect = 1;
+    SortResult sort_result = 2;
+    SortAssignment expected_sort_assignment = 3;  // Only set if we are comparing against an existing sort
+}
+
+message SortAssignment {
+    ServiceAddress service_address = 1;
+    LawFirm assigned_law_firm = 2;  // Only set if service address is assigned to a law firm
+}

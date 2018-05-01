@@ -1,0 +1,69 @@
+@import "../vendor/mdl/mixins";
+@import "../vendor/mdl/variables";
+
+.address-line {
+  margin-bottom: 6px;
+  padding-left: $list-border;
+  padding-right: $list-border;
+  width: 100%;
+}
+
+.addresses-list.mdl-data-table {
+  min-width: $min-container-width;
+  width: 100%;
+  table-layout: fixed;
+
+  & td {
+    vertical-align: top;
+
+    & > div, & > a, & > span, & > button {
+      line-height: 30px;
+    }
+
+    & > span.entity {
+      white-space: pre-wrap;
+    }
+  }
+
+  & td:nth-child(3) {
+    overflow: hidden;
+
+    & > div.address-line {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  & td:nth-child(2) {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  & td:last-child {
+    text-align: center;
+  }
+
+  & .selected {
+    transition: 0.3s;
+    background-color: $data-table-selection-color;
+
+    & .mdl-button {
+      transition: 0.3s;
+      background-color: $data-table-selection-color;
+    }
+  }
+}
+
+.firm-display.mdl-data-table {
+  min-width: $min-container-width;
+  width: 100%;
+  table-layout: fixed;
+
+  & td:nth-child(1), & td:nth-child(2) {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+}
